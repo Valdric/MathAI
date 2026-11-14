@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic[email]
+pydantic-settings
+python-multipart
+python-jose[cryptography]
+werkzeug
+groq
+python-dotenv
+SQLAlchemy
+psycopg2-binary>=2.9.9
+langchain
+langchain-groq
+langchain-text-splitters
+pypdf
+python-docx
