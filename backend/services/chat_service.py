@@ -45,6 +45,12 @@ class ChatService:
         self.db.delete(chat)
         self.db.commit()
 
+    def delete_all_user_chats(self, user_id: int):
+        chats = self.db.query(ChatSession).filter(ChatSession.user_id == user_id).all()
+        for chat in chats:
+            self.db.delete(chat)
+        self.db.commit()
+
     def get_messages(self, chat_id: str, user_id: int):
         chat = self.get_chat_session(chat_id, user_id)
         return self.db.query(Message).filter(Message.chat_id == chat.id).order_by(Message.timestamp.asc()).all()

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../../atoms/Button';
 import { UserPlus } from 'lucide-react';
-import { API_URL } from '../../../config';
+import { signupApi } from '../../../services/auth.service';
 
 interface ISignupFormProps {
   onSwitchToLogin: () => void;
@@ -22,26 +22,14 @@ export const SignupForm: React.FC<ISignupFormProps> = ({ onSwitchToLogin }) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Terjadi kesalahan saat mendaftar');
-      }
+      await signupApi(name, email, password);
 
       setSuccess('Pendaftaran berhasil! Mengalihkan ke form login...');
       setTimeout(() => {
         onSwitchToLogin();
       }, 2000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat mendaftar');
     } finally {
       setIsLoading(false);
     }
@@ -54,8 +42,12 @@ export const SignupForm: React.FC<ISignupFormProps> = ({ onSwitchToLogin }) => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 mb-4 shadow-inner">
             <UserPlus size={32} strokeWidth={1.5} />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2 tracking-tight">Daftar MathAI</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Buat akun baru untuk mulai belajar</p>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2 tracking-tight">
+            Daftar MathAI
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Buat akun baru untuk mulai belajar
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -69,9 +61,11 @@ export const SignupForm: React.FC<ISignupFormProps> = ({ onSwitchToLogin }) => {
               {success}
             </div>
           )}
-          
+
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="name" className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">Nama Lengkap <span className="text-xs font-normal text-slate-400">(Opsional)</span></label>
+            <label htmlFor="name" className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">
+              Nama Lengkap <span className="text-xs font-normal text-slate-400">(Opsional)</span>
+            </label>
             <input
               id="name"
               type="text"
@@ -83,7 +77,9 @@ export const SignupForm: React.FC<ISignupFormProps> = ({ onSwitchToLogin }) => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="email" className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">Email</label>
+            <label htmlFor="email" className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">
+              Email
+            </label>
             <input
               id="email"
               type="email"
@@ -96,7 +92,9 @@ export const SignupForm: React.FC<ISignupFormProps> = ({ onSwitchToLogin }) => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">Kata Sandi</label>
+            <label htmlFor="password" className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">
+              Kata Sandi
+            </label>
             <input
               id="password"
               type="password"
@@ -108,9 +106,9 @@ export const SignupForm: React.FC<ISignupFormProps> = ({ onSwitchToLogin }) => {
             />
           </div>
 
-          <Button 
-            type="submit" 
-            variant="primary" 
+          <Button
+            type="submit"
+            variant="primary"
             className="w-full py-3 mt-2 font-bold text-base shadow-md hover:shadow-lg transition-all"
             disabled={isLoading}
           >
@@ -119,7 +117,11 @@ export const SignupForm: React.FC<ISignupFormProps> = ({ onSwitchToLogin }) => {
 
           <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">
             Sudah punya akun?{' '}
-            <button type="button" className="font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline transition-colors" onClick={onSwitchToLogin}>
+            <button
+              type="button"
+              className="font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline transition-colors"
+              onClick={onSwitchToLogin}
+            >
               Masuk di sini
             </button>
           </p>

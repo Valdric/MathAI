@@ -19,6 +19,12 @@ def create_chat(chat_in: ChatCreate, current_user: User = Depends(get_current_us
     chat_service = ChatService(db)
     return chat_service.create_chat_session(current_user.id, chat_in)
 
+@router.delete("/")
+def delete_all_chats(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    chat_service = ChatService(db)
+    chat_service.delete_all_user_chats(current_user.id)
+    return {"message": "Semua riwayat chat berhasil dihapus"}
+
 @router.delete("/{chat_id}")
 def delete_chat(chat_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     chat_service = ChatService(db)
