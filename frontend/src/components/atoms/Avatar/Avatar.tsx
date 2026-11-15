@@ -28,12 +28,24 @@ export const Avatar: React.FC<IAvatarProps> = ({
     }
   };
 
+  const getTextSizeClass = () => {
+    switch (size) {
+      case 'sm':
+        return "text-xs";
+      case 'lg':
+        return "text-xl";
+      case 'md':
+      default:
+        return "text-sm";
+    }
+  };
+
   return (
     <div className={`${"flex items-center justify-center rounded-full bg-emerald-600 border border-slate-200/50 dark:border-slate-700/50 overflow-hidden select-none shrink-0 shadow-sm backdrop-blur-xl"} ${getSizeClass()}`}>
       {src ? (
         <img src={src} alt={name} className={"w-full h-full object-cover"} />
       ) : (
-        <span className={"text-white font-bold tracking-wider text-xs text-sm text-xl"}>{getInitials(name)}</span>
+        <span className={`text-white font-bold tracking-wider ${getTextSizeClass()}`}>{getInitials(name)}</span>
       )}
     </div>
   );

@@ -3,7 +3,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { useChatStore } from '../../../store/chatStore';
 import { Button } from '../../atoms/Button';
 import { LogIn } from 'lucide-react';
-import { API_URL } from '../../../config';
+import { loginApi } from '../../../services/auth.service';
 
 interface ILoginFormProps {
   onSwitchToSignup: () => void;
@@ -23,28 +23,16 @@ export const LoginForm: React.FC<ILoginFormProps> = ({ onSwitchToSignup }) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Terjadi kesalahan saat login');
-      }
+      const data = await loginApi(email, password);
 
       login(data.user, data.token);
-      
+
       // Load chats for the newly logged in user
       setAppLoading(true);
       await fetchChats();
       setAppLoading(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat login');
     } finally {
       setIsLoading(false);
     }

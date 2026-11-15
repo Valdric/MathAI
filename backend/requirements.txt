@@ -6,12 +6,10 @@ pydantic-settings
 python-multipart
 python-jose[cryptography]
 werkzeug
-groq
+httpx
 python-dotenv
 SQLAlchemy
 psycopg2-binary>=2.9.9
-langchain
-langchain-groq
 langchain-text-splitters
 pypdf
 python-docx

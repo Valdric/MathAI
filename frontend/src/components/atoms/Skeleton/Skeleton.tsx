@@ -20,7 +20,9 @@ export const Skeleton: React.FC<ISkeletonProps> = ({
   return (
     <div
       style={style}
-      className={`${"animate-pulse bg-slate-200 dark:bg-slate-800 rounded-lg h-4 w-full"} ${circle ? "rounded-full" : ''} ${className}`}
+      className={`animate-pulse bg-slate-200 dark:bg-slate-800 h-4 w-full ${
+        circle ? 'rounded-full' : 'rounded-lg'
+      } ${className}`}
     />
   );
 };

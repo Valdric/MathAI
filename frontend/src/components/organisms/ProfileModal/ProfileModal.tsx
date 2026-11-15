@@ -3,17 +3,21 @@ import { X, Save, Trash2, ShieldAlert } from 'lucide-react';
 import { useChatStore } from '../../../store/chatStore';
 import { useAuthStore } from '../../../store/authStore';
 import { Button } from '../../atoms/Button';
-import { API_URL } from '../../../config';
+import {
+  deleteAccountApi,
+  updateProfileApi,
+  type IUpdateProfilePayload,
+} from '../../../services/auth.service';
 
 export const ProfileModal: React.FC = () => {
-  const { isProfileOpen, toggleProfile } = useChatStore();
+  const { isProfileOpen, toggleProfile, clearAllData } = useChatStore();
   const { user, token, updateUser, logout } = useAuthStore();
 
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -32,58 +36,40 @@ export const ProfileModal: React.FC = () => {
     setMessage(null);
 
     try {
-      const payload: any = { name, email };
+      const payload: IUpdateProfilePayload = { name, email };
       if (password) payload.password = password;
 
-      const response = await fetch(`${API_URL}/account`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Gagal memperbarui profil');
-      }
+      const data = await updateProfileApi(token, payload);
 
       updateUser({ name: data.user.name, email: data.user.email });
       setPassword(''); // Clear password field after save
       setMessage({ text: 'Profil berhasil diperbarui!', type: 'success' });
-      
+
       // Auto-hide message after 3 seconds
       setTimeout(() => setMessage(null), 3000);
-    } catch (error: any) {
-      setMessage({ text: error.message, type: 'error' });
+    } catch (error: unknown) {
+      setMessage({
+        text: error instanceof Error ? error.message : 'Gagal memperbarui profil',
+        type: 'error',
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDeleteAccount = async () => {
+    if (!token) return;
     const confirmDelete = window.confirm(
       'Apakah Anda yakin ingin menghapus akun Anda secara permanen? Semua data Anda akan hilang.'
     );
     if (confirmDelete) {
       try {
-        const response = await fetch(`${API_URL}/account`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || 'Gagal menghapus akun');
-        }
+        await deleteAccountApi(token);
         alert('Akun berhasil dihapus.');
-        toggleProfile();
+        clearAllData();
         logout();
-      } catch (error: any) {
-        alert(error.message);
+      } catch (error: unknown) {
+        alert(error instanceof Error ? error.message : 'Gagal menghapus akun');
       }
     }
   };

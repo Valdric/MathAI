@@ -73,3 +73,30 @@ This document tracks all completed features, bug fixes, and refactoring efforts.
 - **[BugFix] Dynamic Viewport Height (`dvh`)**: Menambahkan `height: 100dvh` pada `index.css` global sebagai override dari `height: 100%` untuk browser modern yang mendukung dynamic viewport units.
 - **[BugFix] Mobile Safe Area Support**: Menambahkan `viewport-fit=cover` pada `index.html` dan CSS `env(safe-area-inset-*)` padding pada elemen `body` dan fixed `Sidebar` agar konten tidak tertutup oleh poni layar (notch) atau status bar browser mobile.
 - **[Refactor] Responsive Base Font Size**: Menyesuaikan tipografi dasar menjadi `14px` pada perangkat mobile untuk mencegah antarmuka terasa terlalu besar dan sesak.
+
+### [2026-11-15] - [Type: Refactor | BugFix]
+**Task/Objective:** Perapihan Struktur Proyek sesuai Standar SDD, Ekstraksi Service Layer Frontend, Sinkronisasi Backend Config/Endpoint, dan Pembersihan File Legacy
+**Files Modified:**
+- Root & Legacy Cleanup: Dihapus `cleanup-imports.js`, `refactor.js`, `image.png`, `smartai-tutor.jpg`, `frontend_legacy/`, `backend/backup_old/`, `backend/chroma_db/`, `frontend/src/App.css`, `frontend/src/assets/`, dan 17 file `*.module.css` yang sudah tidak digunakan.
+- `frontend/index.html`, `frontend/src/components/atoms/Avatar/Avatar.tsx`, `frontend/src/components/organisms/Sidebar/Sidebar.tsx`, serta standarisasi barrel file `index.tsx` pada `ProfileMenu`, `LoginForm`, `ProfileModal`, `SignupForm`.
+- `frontend/src/services/http.ts`, `frontend/src/services/auth.service.ts`, `frontend/src/services/chat.service.ts` (Baru)
+- `frontend/src/store/chatStore.ts`, `frontend/src/components/organisms/LoginForm/LoginForm.tsx`, `frontend/src/components/organisms/SignupForm/SignupForm.tsx`, `frontend/src/components/organisms/ProfileModal/ProfileModal.tsx`, `frontend/src/components/organisms/SettingsModal/SettingsModal.tsx`
+- `backend/requirements.txt`, `backend/core/config.py`, `backend/rag.py`, `backend/services/chat_service.py`, `backend/api/routers/chat_router.py`, `backend/api/routers/document_router.py`
+- `.sdd/steering/tech.md`, `.sdd/steering/structure.md`, `.sdd/features/sma-math-guardrails/requirements.md`, `.sdd/features/sma-math-guardrails/design.md`
+**Summary of Changes:**
+- **[Refactor] Housekeeping & Barrel Standardization**: Menghapus seluruh artefak migrasi, kode legacy Flask/vanilla, serta 17 CSS modules mati; menyeragamkan seluruh barrel file komponen menjadi `index.tsx`; mengarahkan favicon `frontend/index.html` ke `/favicon.svg`.
+- **[Refactor] Frontend Service Layer**: Mengekstrak seluruh panggilan `fetch` dari store dan komponen ke `frontend/src/services/` (`http.ts`, `auth.service.ts`, `chat.service.ts`) sesuai konvensi struktur SDD.
+- **[BugFix] FastAPI Error Handling**: Memperbaiki parsing error API di frontend agar membaca field `detail` dari respons error FastAPI (`HTTPException` dan validation errors), bukan lagi `data.error` peninggalan Flask.
+- **[BugFix] Clear All Chats Sync**: Menambahkan endpoint `DELETE /api/chats/` di backend (`chat_router.py` & `chat_service.py`) serta menghubungkan `SettingsModal` melalui `deleteAllChats()` agar "Hapus Semua Data" juga menghapus sesi obrolan dari database server.
+- **[BugFix] Backend Cleanup & Warning Fix**: Memperbaiki `SyntaxWarning` Python 3.12 pada `SMA_MATH_SYSTEM_PROMPT` (`rag.py`), menyelaraskan `backend/core/config.py` dan `backend/requirements.txt` untuk `httpx` + Ollama, serta memproteksi endpoint `POST /upload` dengan `Depends(get_current_user)`.
+- **[Refactor] SDD Steering & Spec Sync**: Memperbarui `.sdd/steering/tech.md`, `.sdd/steering/structure.md`, dan spesifikasi `sma-math-guardrails` agar 100% sinkron dengan implementasi dan standar SDD.
+
+### [2026-11-15] - [Type: Feature]
+**Task/Objective:** Penambahan Panduan Pull Request (`docs/PULL_REQUEST_GUIDE.md`) dan GitHub PR Template (`.github/pull_request_template.md`)
+**Files Modified:**
+- `docs/PULL_REQUEST_GUIDE.md` (Baru)
+- `.github/pull_request_template.md` (Baru)
+- `.sdd/steering/structure.md`
+**Summary of Changes:**
+- **[Feature] PR Guidelines & Template**: Menambahkan dokumentasi standar pembuatan dan review Pull Request di `docs/PULL_REQUEST_GUIDE.md` beserta template otomatis GitHub di `.github/pull_request_template.md`.
+- **[Refactor] Structure Steering Update**: Memperbarui pohon direktori di `.sdd/steering/structure.md` untuk mencatat folder `docs/` dan `.github/`.

@@ -1,0 +1,9 @@
+{
+  "css.lint.unknownAtRules": "ignore",
+  "css.customData": [".vscode/tailwind.css-data.json"],
+  "tailwindCSS.experimental.configFile": "frontend/src/index.css",
+  "tailwindCSS.lint.cssConflict": "ignore",
+  "files.associations": {
+    "*.css": "tailwindcss"
+  }
+}
