@@ -8,4 +8,28 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/login': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/signup': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/account': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/upload': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
+  },
 })
