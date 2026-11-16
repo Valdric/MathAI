@@ -60,6 +60,9 @@ LLM_TEMPERATURE = 0.2
 # 2. Batas Context Window Riwayat Chat (4-6 pesan terakhir) untuk mencegah context stuffing
 MAX_HISTORY_MESSAGES = 6
 
+# Jumlah top-K chunk RAG yang diambil dari ChromaDB (Module 16: dinaikkan dari 3 ke 5)
+RAG_TOP_K = 5
+
 # Lokasi file Knowledge Base Kurikulum Matematika SMA (m4th-lab.net)
 CURRICULUM_KB_PATH = os.path.join(BASE_DIR, "knowledge_base", "sma_m4thlab_curriculum.md")
 
@@ -193,7 +196,7 @@ def retrieve_relevant_curriculum_context(
     query: str,
     grade: Optional[str] = None,
     subject: Optional[str] = None,
-    n_results: int = 3,
+    n_results: int = RAG_TOP_K,
     user_id: Optional[int] = None,
     max_distance: Optional[float] = None,
 ) -> str:
@@ -276,8 +279,18 @@ def build_system_prompt(
     return base_prompt
 
 
-def build_sanitized_user_message(user_message: str) -> str:
-    """Injeksi Ulang Instruksi pada User Message Terakhir (Sandwich Defense)."""
+def build_sanitized_user_message(user_message: str, kb_snippet: str = "") -> str:
+    """Injeksi Ulang Instruksi pada User Message Terakhir (Sandwich Defense) beserta konteks RAG."""
+    if kb_snippet and kb_snippet.strip():
+        return (
+            f"{SANDWICH_DEFENSE_PREFIX}\n\n"
+            "[ATURAN GROUNDING RAG MUTLAK: Gunakan HANYA data, angka, tabel, definisi, dan langkah penyelesaian "
+            "yang tertulis pada REFERENSI MATERI KURIKULUM di bawah ini untuk menjawab pertanyaan siswa. "
+            "DILARANG mengarang cerita, angka, atau contoh sendiri di luar referensi ini!]\n\n"
+            f"=== REFERENSI MATERI KURIKULUM (RAG) ===\n{kb_snippet.strip()}\n"
+            "========================================\n\n"
+            f"Pertanyaan Siswa: {user_message}"
+        )
     return f"{SANDWICH_DEFENSE_PREFIX}\n\nPertanyaan Siswa: {user_message}"
 
 
@@ -483,8 +496,11 @@ def generate_answer(
             else:
                 messages.append({"role": "user", "content": line})
 
-    # Injeksi Ulang Instruksi pada User Message Terakhir (Sandwich Defense)
-    sanitized_user_message = build_sanitized_user_message(query)
+    # Injeksi Ulang Instruksi pada User Message Terakhir (Sandwich Defense + Konteks RAG Terdekat)
+    kb_snippet = retrieve_relevant_curriculum_context(
+        query=query, grade=grade, subject=subject, user_id=user_id
+    )
+    sanitized_user_message = build_sanitized_user_message(query, kb_snippet=kb_snippet)
     messages.append({"role": "user", "content": sanitized_user_message})
 
     return _call_ollama_chat(messages)

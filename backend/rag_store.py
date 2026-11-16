@@ -19,6 +19,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import threading
 import time
 from datetime import datetime, timezone
@@ -87,6 +88,7 @@ def reset_chroma_clients() -> None:
     """Melupakan semua client yang di-cache (dipakai pada pengujian dengan direktori sementara)."""
     with _clients_lock:
         _clients.clear()
+    _COLLECTION_TEXT_CACHE.clear()
 
 
 def get_embedding_function(name: Optional[str] = None):
@@ -385,6 +387,7 @@ def index_uploaded_chunks(
             documents=docs[start:start + batch_size],
             metadatas=metas[start:start + batch_size],
         )
+    _COLLECTION_TEXT_CACHE.clear()
     return {
         "indexed_chunks": len(ids),
         "collection": UPLOAD_COLLECTION_NAME,
@@ -417,6 +420,7 @@ def delete_user_document(user_id: int, filename: str, client=None) -> int:
     count = len(existing.get("ids") or [])
     if count:
         collection.delete(where=where)
+        _COLLECTION_TEXT_CACHE.clear()
     return count
 
 
@@ -430,11 +434,71 @@ def _and(conditions: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     return conditions[0] if len(conditions) == 1 else {"$and": conditions}
 
 
+_STOPWORDS_ID = {
+    "apa", "itu", "dan", "yang", "di", "ke", "dari", "untuk", "pada", "cara",
+    "bagaimana", "menghitung", "tentukan", "nilai", "soal", "materi", "rumus",
+    "contoh", "dengan", "adalah", "jika", "maka", "jelaskan", "tentang", "kelas",
+    "sma", "matematika", "bab", "pengertian", "definisi", "berikan", "tuliskan",
+}
+
+
+def _extract_query_terms(query: str) -> List[str]:
+    q_lower = query.lower()
+    terms = [
+        t for t in re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", q_lower)
+        if len(t) >= 2 and t not in _STOPWORDS_ID and not t.isdigit()
+    ]
+    return list(dict.fromkeys(terms))
+
+
+def _lexical_bonus(query_lower: str, query_terms: List[str], doc_text: str, meta: Dict[str, Any]) -> float:
+    if not query_terms:
+        return 0.0
+    haystack = f"{meta.get('bab', '')} {meta.get('heading_path', '')} {doc_text}".lower()
+    matched = sum(1 for t in query_terms if t in haystack)
+    if matched == 0:
+        return 0.0
+    ratio = matched / len(query_terms)
+    bonus = ratio * 0.45 + min(0.25, matched * 0.06)
+    # Bonus tambahan bila kata cocok tepat di judul subbab (heading_path / bab)
+    heading_haystack = f"{meta.get('bab', '')} {meta.get('heading_path', '')}".lower()
+    heading_matched = sum(1 for t in query_terms if t in heading_haystack)
+    if heading_matched:
+        bonus += min(0.35, heading_matched * 0.15)
+    return bonus
+
+
+_COLLECTION_TEXT_CACHE: Dict[Any, Dict[str, Any]] = {}
+
+
+def _get_cached_collection_data(collection) -> Dict[str, Any]:
+    key = (getattr(collection, "name", id(collection)), collection.count())
+    cached = _COLLECTION_TEXT_CACHE.get(key)
+    if cached is None:
+        if len(_COLLECTION_TEXT_CACHE) > 4:
+            _COLLECTION_TEXT_CACHE.clear()
+        cached = collection.get(include=["documents", "metadatas"])
+        _COLLECTION_TEXT_CACHE[key] = cached
+    return cached
+
+
+def _matches_where(meta: Dict[str, Any], where: Optional[Dict[str, Any]]) -> bool:
+    if not where:
+        return True
+    if "$and" in where:
+        return all(_matches_where(meta, cond) for cond in where["$and"])
+    for k, v in where.items():
+        if meta.get(k) != v:
+            return False
+    return True
+
+
 def _run_query(collection, query: str, n_results: int, where: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
     count = collection.count()
     if count == 0:
         return []
-    params: Dict[str, Any] = {"query_texts": [query], "n_results": min(n_results, count)}
+    candidate_k = min(max(n_results * 10, 30), count)
+    params: Dict[str, Any] = {"query_texts": [query], "n_results": candidate_k}
     if where:
         params["where"] = where
     result = collection.query(**params)
@@ -442,10 +506,40 @@ def _run_query(collection, query: str, n_results: int, where: Optional[Dict[str,
     metas = (result.get("metadatas") or [[]])[0]
     dists = (result.get("distances") or [[]])[0]
     ids = (result.get("ids") or [[]])[0]
-    return [
-        {"id": cid, "text": doc, "metadata": meta or {}, "distance": float(dist)}
-        for cid, doc, meta, dist in zip(ids, docs, metas, dists)
-    ]
+
+    q_lower = query.lower()
+    q_terms = _extract_query_terms(query)
+
+    by_id: Dict[str, Dict[str, Any]] = {}
+    for cid, doc, meta, dist in zip(ids, docs, metas, dists):
+        meta_dict = meta or {}
+        bonus = _lexical_bonus(q_lower, q_terms, doc, meta_dict)
+        adj_dist = float(dist) if float(dist) == 0.0 else max(0.001, float(dist) - bonus)
+        by_id[cid] = {"id": cid, "text": doc, "metadata": meta_dict, "distance": adj_dist}
+
+    # Hybrid lexical scan menggunakan cache memori agar subbab Bahasa Indonesia selalu tertangkap (<1ms)
+    if q_terms and count <= 5000:
+        try:
+            all_data = _get_cached_collection_data(collection)
+            for cid, doc, meta in zip(
+                all_data.get("ids") or [],
+                all_data.get("documents") or [],
+                all_data.get("metadatas") or [],
+            ):
+                if cid in by_id:
+                    continue
+                meta_dict = meta or {}
+                if not _matches_where(meta_dict, where):
+                    continue
+                bonus = _lexical_bonus(q_lower, q_terms, doc, meta_dict)
+                if bonus >= 0.25:
+                    adj_dist = max(0.001, 0.95 - bonus)
+                    by_id[cid] = {"id": cid, "text": doc, "metadata": meta_dict, "distance": adj_dist}
+        except Exception:
+            pass
+
+    ranked = sorted(by_id.values(), key=lambda item: item["distance"])
+    return ranked[: min(n_results, count)]
 
 
 def query_knowledge_chromadb(
