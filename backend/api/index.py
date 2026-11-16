@@ -4,6 +4,8 @@ Author / Maintainer: Valdric
 Repository: https://github.com/Valdric/MathAI
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -12,10 +14,11 @@ import sys
 # Tambahkan path root backend agar import module bekerja
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api.routers import auth_router, user_router, chat_router, document_router
+from api.routers import auth_router, user_router, chat_router, document_router, knowledge_router
 from core.database import engine, Base, SessionLocal
 from core.security import get_password_hash
 from models.user_model import User
+from rag import ensure_chromadb_indexed
 
 # Buat tabel database secara otomatis jika belum ada
 Base.metadata.create_all(bind=engine)
@@ -45,7 +48,16 @@ def ensure_default_user() -> None:
 
 ensure_default_user()
 
-app = FastAPI(title="MathAI API - Asisten AI Matematika SMA", version="2.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Index ChromaDB dibangun di thread latar bila belum mutakhir (server tidak tertahan);
+    # selama itu retrieval memakai fallback keyword.
+    ensure_chromadb_indexed(background=True)
+    yield
+
+
+app = FastAPI(title="MathAI API - Asisten AI Matematika SMA", version="2.0", lifespan=lifespan)
 
 # Konfigurasi CORS agar frontend (React / Vite) dapat mengakses API ini
 app.add_middleware(
@@ -67,6 +79,7 @@ app.include_router(auth_router.router)
 app.include_router(user_router.router)
 app.include_router(chat_router.router)
 app.include_router(document_router.router)
+app.include_router(knowledge_router.router)
 
 @app.get("/")
 def home():

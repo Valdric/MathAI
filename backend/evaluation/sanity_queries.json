@@ -1,0 +1,29 @@
+{
+  "_info": "SMOKE SET buatan Data Engineer (24 pertanyaan) untuk memastikan pipeline retrieval berfungsi. BUKAN Golden Dataset resmi (Row 23 milik Data Scientist: 40-50 soal SMA + 10 prompt jebakan). Data Scientist dapat menyalin format ini. expected_bab = judul bab pada frontmatter materi; retrieval dianggap 'hit' jika salah satu chunk top-K berasal dari bab yang diharapkan.",
+  "queries": [
+    {"id": "S01", "question": "Bagaimana cara mencari invers matriks ordo 2x2?", "expected_bab": ["Matriks"], "expected_kelas": "11"},
+    {"id": "S02", "question": "Jelaskan aturan sinus dan aturan cosinus pada segitiga", "expected_bab": ["Trigonometri"], "expected_kelas": "10"},
+    {"id": "S03", "question": "Cara menentukan turunan fungsi dengan aturan rantai", "expected_bab": ["Turunan Fungsi"], "expected_kelas": "12"},
+    {"id": "S04", "question": "Bagaimana menghitung luas daerah dengan integral tentu?", "expected_bab": ["Integral"], "expected_kelas": "12"},
+    {"id": "S05", "question": "Tabel kebenaran konjungsi dan disjungsi", "expected_bab": ["Logika Matematika (Pengayaan, di luar CP Kurikulum Merdeka)"], "expected_kelas": "Tambahan"},
+    {"id": "S06", "question": "Rumus suku ke-n barisan aritmetika", "expected_bab": ["Barisan dan Deret"], "expected_kelas": "10"},
+    {"id": "S07", "question": "Persamaan lingkaran dengan pusat dan jari-jari", "expected_bab": ["Lingkaran", "Geometri Analitik"], "expected_kelas": "11"},
+    {"id": "S08", "question": "Jarak titik ke bidang pada kubus", "expected_bab": ["Dimensi Tiga"], "expected_kelas": "12"},
+    {"id": "S09", "question": "Langkah pembuktian dengan induksi matematika", "expected_bab": ["Induksi Matematika"], "expected_kelas": "11"},
+    {"id": "S10", "question": "Sifat-sifat logaritma dan perubahan basis", "expected_bab": ["Eksponen dan Logaritma"], "expected_kelas": "10"},
+    {"id": "S11", "question": "Teorema sisa dan teorema faktor pada suku banyak", "expected_bab": ["Polinomial"], "expected_kelas": "11"},
+    {"id": "S12", "question": "Menentukan mean, median, dan modus data tunggal", "expected_bab": ["Statistika"], "expected_kelas": "10"},
+    {"id": "S13", "question": "Menyelesaikan pertidaksamaan nilai mutlak", "expected_bab": ["Persamaan dan Pertidaksamaan Nilai Mutlak"], "expected_kelas": "10"},
+    {"id": "S14", "question": "Menentukan komposisi fungsi f(g(x))", "expected_bab": ["Komposisi Fungsi dan Fungsi Invers"], "expected_kelas": "11"},
+    {"id": "S15", "question": "Cicilan pinjaman, bunga majemuk, dan anuitas", "expected_bab": ["Investasi dan Pinjaman"], "expected_kelas": "12"},
+    {"id": "S16", "question": "Menentukan limit fungsi di tak hingga", "expected_bab": ["Limit"], "expected_kelas": "12"},
+    {"id": "S17", "question": "Rotasi dan dilatasi pada transformasi geometri", "expected_bab": ["Transformasi Geometri"], "expected_kelas": "11"},
+    {"id": "S18", "question": "Menyelesaikan sistem persamaan linear tiga variabel dengan eliminasi", "expected_bab": ["Sistem Persamaan dan Pertidaksamaan Linear"], "expected_kelas": "10"},
+    {"id": "S19", "question": "Permutasi dan kombinasi dengan aturan perkalian", "expected_bab": ["Kombinatorik dan Peluang", "Peluang"], "expected_kelas": "12"},
+    {"id": "S20", "question": "Panjang vektor dan perkalian titik dua vektor", "expected_bab": ["Vektor dan Operasinya"], "expected_kelas": "10"},
+    {"id": "S21", "question": "Menentukan akar persamaan kuadrat dengan rumus abc", "expected_bab": ["Persamaan, Fungsi, dan Pertidaksamaan Kuadrat"], "expected_kelas": "10"},
+    {"id": "S22", "question": "Menghitung peluang kejadian majemuk", "expected_bab": ["Peluang", "Kombinatorik dan Peluang", "Analisis Data dan Peluang"], "expected_kelas": "10"},
+    {"id": "S23", "question": "Persamaan elips dan hiperbola", "expected_bab": ["Geometri Analitik"], "expected_kelas": "12"},
+    {"id": "S24", "question": "Koefisien korelasi dan regresi linear data bivariat", "expected_bab": ["Statistika: Analisis Data Bivariat"], "expected_kelas": "11"}
+  ]
+}

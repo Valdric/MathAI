@@ -10,6 +10,12 @@ __pycache__/
 backend/instance/
 frontend/dist/
 
+# RAG: artefak lokal yang dibangun otomatis dari backend/knowledge_base saat server start
+backend/chroma_db/
+backend/chroma_experiments/
+backend/uploads/
+backend/raw_pdfs/
+
 # Node modules
 node_modules/
 

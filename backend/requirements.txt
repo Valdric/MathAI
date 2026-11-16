@@ -11,5 +11,9 @@ python-dotenv
 SQLAlchemy
 psycopg2-binary>=2.9.9
 langchain-text-splitters
+langchain-core
 pypdf
 python-docx
+pyyaml
+chromadb
+
