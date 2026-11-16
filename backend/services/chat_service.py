@@ -104,6 +104,7 @@ class ChatService:
                 history_messages=history_messages,
                 grade=grade,
                 subject=subject,
+                user_id=chat.user_id,
             )
         except Exception as e:
             error_msg = str(e)

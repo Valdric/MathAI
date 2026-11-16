@@ -2,11 +2,18 @@
 MathAI Backend RAG & Prompt Guardrail Handler
 Author / Maintainer: Valdric
 Repository: https://github.com/Valdric/MathAI
-Knowledge Base Reference: backend/knowledge_base/sma_m4thlab_curriculum.md (https://www.m4th-lab.net/materi?level=sma)
+
+Struktur modul RAG:
+  rag_chunking.py : cleaning LaTeX + structure-aware chunking      (Data Engineer, Row 18-19)
+  rag_store.py    : ChromaDB, indexing kurikulum & upload, retrieval (Data Engineer, Row 20-21)
+  rag.py          : ekstraksi file, prompt/guardrail, pemanggilan LLM (file ini; ML Engineer, Row 29-31)
+Nama-nama fungsi pipeline di-re-export di sini sehingga `from rag import ...` tetap valid.
 """
 
 import os
-from typing import List, Dict, Optional
+import re
+from typing import List, Dict, Optional, Any
+
 import httpx
 from dotenv import load_dotenv
 
@@ -14,9 +21,38 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 load_dotenv()
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 from docx import Document as DocxDocument
+from docx.table import Table as DocxTable
+from docx.text.paragraph import Paragraph as DocxParagraph
+
+from rag_chunking import (  # noqa: F401  (re-export)
+    DEFAULT_CHUNK_OVERLAP,
+    DEFAULT_CHUNK_SIZE,
+    UNICODE_MATH_MAP,
+    chunk_markdown_with_metadata,
+    clean_and_normalize_latex,
+    detect_grade,
+    extract_frontmatter,
+    normalize_grade,
+    split_text_preserving_math,
+)
+from rag_store import (  # noqa: F401  (re-export)
+    CHROMA_PERSIST_DIR,
+    INDEX_STATUS,
+    KNOWLEDGE_COLLECTION_NAME,
+    UPLOAD_COLLECTION_NAME,
+    delete_user_document,
+    ensure_chromadb_indexed,
+    get_chroma_client,
+    get_knowledge_collection,
+    get_knowledge_stats,
+    index_curriculum_to_chromadb,
+    index_uploaded_chunks,
+    list_curriculum_topics,
+    list_user_documents,
+    query_knowledge_chromadb,
+)
 
 # 1. Konfigurasi Temperature Rendah (0.2) untuk konsistensi perhitungan & kepatuhan guardrail
 LLM_TEMPERATURE = 0.2
@@ -116,12 +152,13 @@ def load_curriculum_knowledge_base() -> str:
     return ""
 
 
-def retrieve_relevant_curriculum_context(
+
+def _keyword_fallback_context(
     query: str,
     grade: Optional[str] = None,
     subject: Optional[str] = None,
 ) -> str:
-    """Mengambil potongan bagian yang relevan dari sma_m4thlab_curriculum.md berdasarkan pertanyaan/topik."""
+    """Fallback bila ChromaDB tidak tersedia / sedang indexing / tidak menemukan hasil."""
     kb_text = load_curriculum_knowledge_base()
     if not kb_text:
         return ""
@@ -132,7 +169,6 @@ def retrieve_relevant_curriculum_context(
     matched_sections = []
     for sec in sections:
         sec_lower = sec.lower()
-        # Cek kecocokan kata kunci materi
         keywords = [
             "eksponen", "logaritma", "mutlak", "spltv", "spldv", "fungsi", "komposisi",
             "invers", "kuadrat", "trigonometri", "sinus", "cosinus", "induksi",
@@ -153,12 +189,55 @@ def retrieve_relevant_curriculum_context(
     return ""
 
 
+def retrieve_relevant_curriculum_context(
+    query: str,
+    grade: Optional[str] = None,
+    subject: Optional[str] = None,
+    n_results: int = 3,
+    user_id: Optional[int] = None,
+    max_distance: Optional[float] = None,
+) -> str:
+    """
+    [Row 20 / Row 29-30] Mengambil konteks materi relevan untuk prompt LLM.
+
+    1. Semantic search ChromaDB (smartai_knowledge + dokumen unggahan milik user_id).
+       `grade` menerima 'Kelas 10' / 'X' / '10' (dinormalisasi) dan dipakai sebagai filter metadata
+       dengan prioritas, bukan pemblokiran (lihat query_knowledge_chromadb).
+    2. Bila kosong -> fallback pencocokan kata kunci pada sma_m4thlab_curriculum.md.
+    `max_distance` (opsional) membuang hasil yang terlalu jauh dari pertanyaan.
+    `subject` dipakai pada fallback dan pada System Prompt; tidak dicampur ke query vektor agar
+    kata kunci kategori UI tidak menggeser hasil semantik.
+    """
+    hits = query_knowledge_chromadb(
+        query=query,
+        grade=grade,
+        n_results=n_results,
+        user_id=user_id,
+    )
+    if max_distance is not None:
+        hits = [h for h in hits if h["distance"] <= max_distance]
+
+    if hits:
+        parts = []
+        for hit in hits:
+            meta = hit["metadata"]
+            if meta.get("origin") == "upload":
+                label = f"Dokumen unggahan Anda: {meta.get('source_file', '-')}"
+            else:
+                label = f"{meta.get('bab', 'Umum')} (Kelas {meta.get('kelas', '-')}, {meta.get('mapel', 'Matematika')})"
+            parts.append(f"> **Sumber:** {label}\n{hit['text']}")
+        return "\n\n---\n\n".join(parts)
+
+    return _keyword_fallback_context(query, grade, subject)
+
+
 def build_system_prompt(
     grade: Optional[str] = None,
     subject: Optional[str] = None,
     context: str = "",
     custom_instruction: str = "",
     query: str = "",
+    user_id: Optional[int] = None,
 ) -> str:
     """Menyusun System Prompt yang selalu dikunci pada indeks ke-0 dengan integrasi Knowledge Base m4th-lab.net."""
     base_prompt = (
@@ -180,10 +259,12 @@ def build_system_prompt(
             + "\n(Catatan Mutlak: Walaupun terdapat fokus topik di atas, kamu TETAP HANYA DIIZINKAN menjawab materi Matematika SMA sesuai m4th-lab.net. Jika fokus topik atau pertanyaan di luar Matematika SMA, wajib berikan Template Respons Penolakan Standar.)"
         )
 
-    kb_snippet = retrieve_relevant_curriculum_context(query=query, grade=grade, subject=subject)
+    kb_snippet = retrieve_relevant_curriculum_context(
+        query=query, grade=grade, subject=subject, user_id=user_id
+    )
     if kb_snippet:
         extra_sections.append(
-            "# REFERENSI KNOWLEDGE BASE KURIKULUM (sma_m4thlab_curriculum.md)\n"
+            "# REFERENSI KNOWLEDGE BASE KURIKULUM (hasil pencarian ChromaDB)\n"
             + kb_snippet
         )
 
@@ -200,38 +281,119 @@ def build_sanitized_user_message(user_message: str) -> str:
     return f"{SANDWICH_DEFENSE_PREFIX}\n\nPertanyaan Siswa: {user_message}"
 
 
+def _docx_to_markdown(doc) -> str:
+    """Mengubah .docx menjadi Markdown: Heading 1-4 -> #..####, tabel -> baris '| a | b |'."""
+    blocks: List[str] = []
+    for child in doc.element.body.iterchildren():
+        tag = child.tag.rsplit("}", 1)[-1]
+        if tag == "p":
+            paragraph = DocxParagraph(child, doc)
+            content = paragraph.text.strip()
+            if not content:
+                continue
+            style = (paragraph.style.name if paragraph.style is not None else "") or ""
+            match = re.match(r"Heading\s+(\d)", style, re.IGNORECASE)
+            if match:
+                blocks.append("#" * min(int(match.group(1)), 4) + " " + content)
+            elif style.lower() == "title":
+                blocks.append("# " + content)
+            else:
+                blocks.append(content)
+        elif tag == "tbl":
+            rows = []
+            for row in DocxTable(child, doc).rows:
+                cells = [c.text.strip().replace("\n", " ") for c in row.cells]
+                rows.append("| " + " | ".join(cells) + " |")
+            if rows:
+                blocks.append("\n".join(rows))
+    return "\n\n".join(blocks)
+
+
 def get_text_from_file(file_path: str) -> str:
+    """Mengekstrak teks dari .pdf (pypdf), .docx (heading dipertahankan sebagai #), .md, dan .txt."""
     ext = os.path.splitext(file_path)[1].lower()
-    text = ""
     if ext == ".pdf":
-        reader = PdfReader(file_path)
-        for page in reader.pages:
-            t = page.extract_text()
-            if t:
-                text += t + "\n"
-    elif ext == ".docx":
-        doc = DocxDocument(file_path)
-        for para in doc.paragraphs:
-            text += para.text + "\n"
-    elif ext in (".txt", ".md"):
-        with open(file_path, "r", encoding="utf-8") as f:
-            text = f.read()
-    else:
-        raise ValueError(f"Tipe file {ext} tidak didukung.")
-    return text
+        try:
+            reader = PdfReader(file_path)
+            pages = [(page.extract_text() or "").strip() for page in reader.pages]
+        except Exception as exc:
+            raise ValueError(f"PDF tidak dapat dibaca (rusak / terenkripsi): {exc}")
+        return "\n\n".join(p for p in pages if p)
+    if ext == ".docx":
+        try:
+            return _docx_to_markdown(DocxDocument(file_path))
+        except Exception as exc:
+            raise ValueError(f"File .docx tidak dapat dibaca: {exc}")
+    if ext in (".txt", ".md"):
+        try:
+            with open(file_path, "r", encoding="utf-8-sig") as handle:
+                return handle.read()
+        except UnicodeDecodeError:
+            raise ValueError("File teks harus berenkode UTF-8.")
+    raise ValueError(f"Tipe file {ext} tidak didukung.")
 
 
-def process_document(file_path: str):
-    """Membaca file dan memecahnya menjadi kumpulan teks."""
+def process_document(
+    file_path: str,
+    default_metadata: Optional[Dict[str, Any]] = None,
+    override_metadata: Optional[Dict[str, Any]] = None,
+    source_name: Optional[str] = None,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
+) -> List[Dict[str, Any]]:
+    """
+    [Row 18-19] Ekstraksi -> cleaning LaTeX -> structure-aware chunking untuk semua tipe file.
+    Mengembalikan [{'text': str, 'metadata': dict}, ...].
+    Prioritas metadata: override_metadata > frontmatter dokumen > default_metadata.
+    """
     text = get_text_from_file(file_path)
     if not text.strip():
-        raise ValueError("Teks kosong atau gagal diekstrak.")
-    
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200
+        raise ValueError("Teks kosong atau gagal diekstrak (PDF hasil scan belum didukung OCR).")
+
+    filename = source_name or os.path.basename(file_path)
+    defaults: Dict[str, Any] = {"judul": os.path.splitext(filename)[0]}
+    defaults.update(default_metadata or {})
+    chunks = chunk_markdown_with_metadata(
+        text,
+        source_name=filename,
+        default_metadata=defaults,
+        override_metadata=override_metadata,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
     )
-    return text_splitter.split_text(text)
+    if not chunks:
+        raise ValueError("Dokumen tidak menghasilkan potongan teks.")
+    return chunks
+
+
+def ingest_uploaded_document(
+    file_path: str,
+    user_id: int,
+    original_filename: str,
+    kelas: Optional[str] = None,
+    bab: Optional[str] = None,
+    tingkat_lanjut: Optional[bool] = None,
+) -> Dict[str, Any]:
+    """
+    [Row 21] Pipeline lengkap unggahan: ekstraksi -> cleaning -> chunking -> index ke ChromaDB
+    (koleksi smartai_uploads, dibatasi per pengguna).
+    """
+    override = {
+        "kelas": normalize_grade(kelas) if kelas else None,
+        "judul": bab.strip() if bab and bab.strip() else None,
+        "tingkat_lanjut": tingkat_lanjut,
+    }
+    chunks = process_document(file_path, override_metadata=override, source_name=original_filename)
+    indexed = index_uploaded_chunks(chunks, user_id=user_id, filename=original_filename)
+    first = chunks[0]["metadata"]
+    return {
+        "chunks_count": len(chunks),
+        "indexed_chunks": indexed["indexed_chunks"],
+        "collection": indexed["collection"],
+        "kelas": first["kelas"],
+        "bab": first["bab"],
+        "tingkat_lanjut": first["tingkat_lanjut"],
+    }
 
 
 def _call_ollama_chat(messages: List[Dict[str, str]]) -> str:
@@ -277,6 +439,7 @@ def generate_answer(
     history_messages: Optional[List[Dict[str, str]]] = None,
     grade: Optional[str] = None,
     subject: Optional[str] = None,
+    user_id: Optional[int] = None,
 ) -> str:
     """
     Mengirim array messages ke model AI (Ollama / Docker) dengan 3 penguatan keamanan backend:
@@ -291,6 +454,7 @@ def generate_answer(
         context=context,
         custom_instruction=system_instruction,
         query=query,
+        user_id=user_id,
     )
 
     # Indeks ke-0 selalu dikunci untuk System Prompt utama
