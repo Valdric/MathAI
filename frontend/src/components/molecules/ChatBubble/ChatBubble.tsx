@@ -3,7 +3,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
 import type { IMessage } from '../../../types/chat';
 import { Avatar } from '../../../components/atoms/Avatar';
 import { Skeleton } from '../../../components/atoms/Skeleton';
@@ -79,7 +78,7 @@ export const ChatBubble: React.FC<IChatBubbleProps> = ({ message, isLoading = fa
             <div className="wrap-break-word">
               <ReactMarkdown
                 remarkPlugins={[remarkMath, remarkGfm]}
-                rehypePlugins={[rehypeRaw, rehypeKatex]}
+                rehypePlugins={[rehypeKatex]}
               >
                 {preprocessLaTeX(message.text)}
               </ReactMarkdown>
