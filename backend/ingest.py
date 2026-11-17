@@ -10,6 +10,7 @@ from typing import List, Dict, Any, Tuple
 from pypdf import PdfReader
 from docx import Document as DocxDocument
 
+from embeddings import embed_text, DEFAULT_OLLAMA_BASE_URL
 from rag_chunking import (
     chunk_markdown_with_metadata,
     clean_and_normalize_latex,
@@ -123,24 +124,47 @@ def discover_knowledge_base_files(kb_root: str) -> List[str]:
 def ingest_documents(
     knowledge_base_path: str,
     vector_store: Any,
-    chunk_size: int = 900,
-    chunk_overlap: int = 150,
+    index_name: str = "mathai_knowledge_base",
+    ollama_base_url: str = DEFAULT_OLLAMA_BASE_URL,
 ) -> int:
     """
-    [Module 14] Membaca seluruh dokumen di knowledge_base_path, memecahnya menjadi chunks,
-    dan menyimpannya ke VectorStore (ChromaDB) secara idempotent (upsert berdasarkan doc_id).
+    [Module 14] Membaca seluruh dokumen di knowledge_base_path, meng-embed dengan nomic-embed-text,
+    dan menyimpannya ke VectorStore (ChromaDB) menggunakan doc_id=filename agar idempotent
+    (overwrite di tempat tanpa menduplikasi dokumen saat dijalankan berulang kali).
     """
-    vector_store.ensure_collection()
-    files = discover_knowledge_base_files(knowledge_base_path)
-    all_chunks: List[Dict[str, Any]] = []
+    kb_path = knowledge_base_path
+    if not os.path.exists(kb_path):
+        fallback_kb = os.path.join(os.path.dirname(os.path.abspath(__file__)), "knowledge_base")
+        if os.path.exists(fallback_kb):
+            kb_path = fallback_kb
+
+    vector_store.ensure_index(index_name)
+
+    # Cek apakah folder berisi file langsung di level atas atau subfolder kurikulum
+    direct_files = [
+        os.path.join(kb_path, f)
+        for f in sorted(os.listdir(kb_path))
+        if os.path.isfile(os.path.join(kb_path, f))
+        and f.lower().endswith((".md", ".txt", ".pdf", ".docx"))
+        and f.lower() != "readme.md"
+    ] if os.path.isdir(kb_path) else []
+
+    files = discover_knowledge_base_files(kb_path)
+    if not files and direct_files:
+        files = direct_files
+
+    count = 0
     for file_path in files:
-        rel_path = os.path.relpath(file_path, knowledge_base_path).replace("\\", "/")
+        rel_path = os.path.relpath(file_path, kb_path).replace("\\", "/")
+        doc_id = os.path.basename(file_path) if "/" not in rel_path else rel_path
         text = extract_text(file_path)
-        chunks = split_markdown_into_chunks(
-            text,
-            rel_path=rel_path,
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
+        embedding = embed_text(text, base_url=ollama_base_url)
+        vector_store.index_document(
+            index_name,
+            doc_id=doc_id,
+            text=text,
+            embedding=embedding,
+            metadata={"source": doc_id},
         )
-        all_chunks.extend(chunks)
-    return vector_store.index_chunks(all_chunks)
+        count += 1
+    return count
