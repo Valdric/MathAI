@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 from embeddings import embed_text, embed_texts, DEFAULT_OLLAMA_BASE_URL, DEFAULT_EMBED_MODEL
 from ingest import extract_text, split_markdown_into_chunks, discover_knowledge_base_files
+from rag_store import get_chroma_client
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
@@ -33,6 +34,7 @@ class VectorStore:
         collection_name: str = COLLECTION_NAME,
         ollama_base_url: str = DEFAULT_OLLAMA_BASE_URL,
         embed_model: str = DEFAULT_EMBED_MODEL,
+        auto_index: bool = True,
     ):
         self.chroma_path = os.path.abspath(chroma_path)
         self.collection_name = collection_name
@@ -40,8 +42,16 @@ class VectorStore:
         self.embed_model = embed_model
 
         os.makedirs(self.chroma_path, exist_ok=True)
-        self.client = chromadb.PersistentClient(path=self.chroma_path)
+        self.client = get_chroma_client(self.chroma_path)
         self.collection = self.ensure_collection()
+        if (
+            auto_index
+            and self.chroma_path == os.path.abspath(DEFAULT_CHROMA_PATH)
+            and self.collection_name == COLLECTION_NAME
+            and self.collection.count() == 0
+            and os.path.isdir(DEFAULT_KB_PATH)
+        ):
+            self.index_knowledge_base(kb_root=DEFAULT_KB_PATH)
 
     def ensure_collection(self):
         """Membuat atau mengambil collection ChromaDB dengan metrik cosine similarity."""
@@ -138,7 +148,7 @@ class VectorStore:
             )
             all_chunks.extend(file_chunks)
 
-        indexed_count = self.index_chunks(all_chunks, batch_size=32, uploaded_by="system")
+        indexed_count = self.index_chunks(all_chunks, batch_size=256, uploaded_by="system")
         return {
             "status": "indexed",
             "files_processed": len(files),

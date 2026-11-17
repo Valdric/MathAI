@@ -1,3 +1,13 @@
+---
+judul: "Ringkasan Silabus Kurikulum Matematika SMA (m4th-lab.net)"
+kelas: "Umum"
+fase: "E-F"
+bab: "0"
+mapel: "Matematika Umum dan Tingkat Lanjut"
+kurikulum: "Kurikulum Merdeka dan Kurikulum 2013"
+sumber: "https://www.m4th-lab.net/materi?level=sma"
+---
+
 # Knowledge Base Kurikulum Matematika SMA (Referensi: m4th-lab.net)
 
 Sumber Kebenaran Utama (*Grounding Scope*): **https://www.m4th-lab.net/materi?level=sma**  

@@ -1,0 +1,1133 @@
+{
+  "pipeline_elapsed_seconds": 15.38,
+  "indexing_status": {
+    "status": "already_indexed",
+    "total_chunks": 3179,
+    "collection_name": "smartai_knowledge"
+  },
+  "eda_profiling": {
+    "total_chunks": 3179,
+    "distributions": {
+      "by_grade": {
+        "10": 1713,
+        "11": 1004,
+        "12": 200,
+        "Tambahan": 262
+      },
+      "by_track": {
+        "Matematika Umum (Wajib)": 2289,
+        "Matematika Tingkat Lanjut (Peminatan)": 890
+      },
+      "by_difficulty": {
+        "Mudah": 1257,
+        "Sedang": 1818,
+        "Sulit": 104
+      },
+      "by_domain_category": {
+        "Aljabar, Eksponen & Sistem Persamaan": 1716,
+        "Polinomial & Fungsi Lanjut": 339,
+        "Matriks, Vektor & Transformasi": 326,
+        "Statistika & Peluang": 288,
+        "Logika & Induksi Matematika": 264,
+        "Kalkulus (Limit, Turunan, Integral)": 76,
+        "Barisan, Deret & Keuangan": 60,
+        "Trigonometri": 58,
+        "Geometri & Dimensi Tiga": 52
+      },
+      "by_bab_top10": {
+        "Sistem Persamaan dan Pertidaksamaan Linear": 488,
+        "Persamaan, Fungsi, dan Pertidaksamaan Kuadrat": 438,
+        "Fungsi dan Pemodelannya": 351,
+        "Eksponen dan Logaritma": 320,
+        "Logika Matematika (Pengayaan, di luar CP Kurikulum Merdeka)": 262,
+        "Matriks": 254,
+        "Komposisi Fungsi dan Fungsi Invers": 202,
+        "Statistika": 198,
+        "Persamaan dan Pertidaksamaan Nilai Mutlak": 151,
+        "Polinomial": 138
+      },
+      "by_bab_bottom5": {
+        "Induksi Matematika": 8,
+        "Dimensi Tiga": 8,
+        "Kekongruenan dan Kesebangunan": 9,
+        "Transformasi Fungsi": 10,
+        "Peluang": 11
+      },
+      "total_unique_babs": 28
+    },
+    "length_and_token_stats": {
+      "characters": {
+        "mean": 727.54,
+        "std": 219.79,
+        "min": 144,
+        "q25": 570.0,
+        "median": 736.0,
+        "q75": 908.0,
+        "iqr": 338.0,
+        "p95": 1057.0,
+        "max": 1203
+      },
+      "tokens": {
+        "mean": 103.54,
+        "std": 33.6,
+        "min": 23,
+        "q25": 79.0,
+        "median": 103.0,
+        "q75": 127.0,
+        "iqr": 48.0,
+        "p95": 158.0,
+        "max": 238
+      },
+      "complexity_score": {
+        "mean": 4.23,
+        "std": 1.67,
+        "median": 4.49
+      }
+    },
+    "latex_and_reasoning_ratios": {
+      "latex_chunk_coverage_ratio": 0.8849,
+      "display_math_chunk_ratio": 0.67,
+      "step_by_step_reasoning_ratio": 0.7172,
+      "worked_example_chunk_ratio": 0.4325,
+      "total_display_formulas": 9721,
+      "total_inline_formulas": 22893
+    },
+    "class_imbalance_analysis": {
+      "chapter_imbalance_ratio_max_min": 61.0,
+      "largest_chapter": {
+        "bab": "Sistem Persamaan dan Pertidaksamaan Linear",
+        "chunks": 488
+      },
+      "smallest_chapter": {
+        "bab": "Induksi Matematika",
+        "chunks": 8
+      },
+      "chapter_gini_coefficient": 0.615,
+      "chapter_normalized_entropy": 0.7965,
+      "grade_imbalance_ratio_max_min": 8.56,
+      "is_imbalanced_warning": true
+    },
+    "outlier_analysis": {
+      "tukey_lower_fence_chars": 63.0,
+      "tukey_upper_fence_chars": 1415.0,
+      "total_char_outliers": 0,
+      "outlier_ratio": 0.0,
+      "sample_outliers": []
+    }
+  },
+  "statistical_validation": {
+    "passed": true,
+    "total_checked": 3179,
+    "valid_chunks": 3179,
+    "schema_error_count": 0,
+    "duplicate_id_count": 0,
+    "mean_char_length": 727.54,
+    "grade_counts": {
+      "10": 1713,
+      "11": 1004,
+      "12": 200,
+      "Tambahan": 262
+    },
+    "statistical_assertions": {
+      "total_chunks_min_1000": true,
+      "zero_schema_or_latex_errors": true,
+      "zero_duplicate_chunk_ids": true,
+      "all_core_grades_covered_10_11_12": true,
+      "mean_chunk_length_in_bounds_250_1200": true
+    },
+    "sample_errors": []
+  },
+  "stratified_split_counts": {
+    "train": 38,
+    "val": 11,
+    "test": 11,
+    "total": 60
+  },
+  "leakage_verification": {
+    "leakage_free": true,
+    "id_overlaps": {
+      "train_val": [],
+      "train_test": [],
+      "val_test": []
+    },
+    "text_hash_overlaps": {
+      "train_val": 0,
+      "train_test": 0,
+      "val_test": 0
+    },
+    "strata_distribution": {
+      "train": {
+        "10_Mudah": 5,
+        "10_Sedang": 5,
+        "10_Sulit": 2,
+        "11_Mudah": 3,
+        "11_Sedang": 3,
+        "11_Sulit": 3,
+        "12_Mudah": 3,
+        "12_Sedang": 3,
+        "12_Sulit": 3,
+        "TRAP": 6,
+        "Tambahan_Mudah": 1,
+        "Tambahan_Sedang": 1
+      },
+      "val": {
+        "10_Mudah": 1,
+        "10_Sedang": 1,
+        "10_Sulit": 1,
+        "11_Mudah": 1,
+        "11_Sedang": 1,
+        "11_Sulit": 1,
+        "12_Mudah": 1,
+        "12_Sedang": 1,
+        "12_Sulit": 1,
+        "TRAP": 2
+      },
+      "test": {
+        "10_Mudah": 1,
+        "10_Sedang": 1,
+        "10_Sulit": 1,
+        "11_Mudah": 1,
+        "11_Sedang": 1,
+        "11_Sulit": 1,
+        "12_Mudah": 1,
+        "12_Sedang": 1,
+        "12_Sulit": 1,
+        "TRAP": 2
+      }
+    }
+  },
+  "retrieval_evaluation": {
+    "full_dataset": {
+      "num_queries": 50,
+      "top_k": 5,
+      "recall_at_k": {
+        "Recall@1": 0.98,
+        "Recall@3": 1.0,
+        "Recall@5": 1.0
+      },
+      "mrr": 0.99,
+      "ndcg_at_k": 0.9904,
+      "mean_top1_distance": 0.0216,
+      "recall_by_difficulty": {
+        "Mudah": 1.0,
+        "Sedang": 1.0,
+        "Sulit": 1.0
+      },
+      "recall_by_grade": {
+        "10": 1.0,
+        "11": 1.0,
+        "12": 1.0,
+        "Tambahan": 1.0
+      },
+      "misses_count": 0,
+      "misses": [],
+      "per_query": [
+        {
+          "id": "G04",
+          "question": "Rumus suku ke-n barisan aritmetika jika suku pertama a = 4 dan beda b = 3 untuk mencari U_10",
+          "expected_bab": [
+            "Barisan dan Deret"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Barisan dan Deret",
+            "Barisan dan Deret",
+            "Barisan dan Deret"
+          ]
+        },
+        {
+          "id": "G08",
+          "question": "Perbandingan trigonometri sin, cos, dan tan pada segitiga siku-siku dengan sisi depan 3 dan miring 5",
+          "expected_bab": [
+            "Trigonometri"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Trigonometri",
+            "Trigonometri",
+            "Trigonometri"
+          ]
+        },
+        {
+          "id": "G12",
+          "question": "Menentukan akar persamaan kuadrat x^2 - 5x + 6 = 0 dengan pemfaktoran dan rumus abc",
+          "expected_bab": [
+            "Persamaan, Fungsi, dan Pertidaksamaan Kuadrat"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Persamaan, Fungsi, dan Pertidaksamaan Kuadrat",
+            "Persamaan, Fungsi, dan Pertidaksamaan Kuadrat",
+            "Persamaan, Fungsi, dan Pertidaksamaan Kuadrat"
+          ]
+        },
+        {
+          "id": "G06",
+          "question": "Panjang vektor dan perkalian titik dua vektor a = (3, 4) pada bidang R2",
+          "expected_bab": [
+            "Vektor dan Operasinya"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Vektor dan Operasinya",
+            "Vektor dan Operasinya",
+            "Vektor dan Operasinya"
+          ]
+        },
+        {
+          "id": "G17",
+          "question": "Menyelesaikan persamaan nilai mutlak |2x - 4| = 6",
+          "expected_bab": [
+            "Persamaan dan Pertidaksamaan Nilai Mutlak"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Persamaan dan Pertidaksamaan Nilai Mutlak",
+            "Persamaan dan Pertidaksamaan Nilai Mutlak",
+            "Persamaan dan Pertidaksamaan Nilai Mutlak"
+          ]
+        },
+        {
+          "id": "G10",
+          "question": "Menyelesaikan sistem persamaan linear tiga variabel (SPLTV) dengan eliminasi dan substitusi",
+          "expected_bab": [
+            "Sistem Persamaan dan Pertidaksamaan Linear"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Sistem Persamaan dan Pertidaksamaan Linear",
+            "Sistem Persamaan dan Pertidaksamaan Linear",
+            "Sistem Persamaan dan Pertidaksamaan Linear"
+          ]
+        },
+        {
+          "id": "G18",
+          "question": "Menyelesaikan pertidaksamaan nilai mutlak |3x + 2| < 7",
+          "expected_bab": [
+            "Persamaan dan Pertidaksamaan Nilai Mutlak"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Persamaan dan Pertidaksamaan Nilai Mutlak",
+            "Persamaan dan Pertidaksamaan Nilai Mutlak",
+            "Persamaan dan Pertidaksamaan Nilai Mutlak"
+          ]
+        },
+        {
+          "id": "G09",
+          "question": "Jelaskan aturan sinus dan aturan cosinus pada segitiga sembarang",
+          "expected_bab": [
+            "Trigonometri"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Trigonometri",
+            "Trigonometri",
+            "Trigonometri"
+          ]
+        },
+        {
+          "id": "G13",
+          "question": "Menentukan titik puncak dan sumbu simetri grafik fungsi kuadrat serta nilai diskriminan D = b^2 - 4ac",
+          "expected_bab": [
+            "Persamaan, Fungsi, dan Pertidaksamaan Kuadrat"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Persamaan, Fungsi, dan Pertidaksamaan Kuadrat",
+            "Persamaan, Fungsi, dan Pertidaksamaan Kuadrat",
+            "Persamaan, Fungsi, dan Pertidaksamaan Kuadrat"
+          ]
+        },
+        {
+          "id": "G02",
+          "question": "Sifat-sifat logaritma dan perubahan basis: hitung nilai dari ^2log 8 + ^3log 9",
+          "expected_bab": [
+            "Eksponen dan Logaritma"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Eksponen dan Logaritma",
+            "Eksponen dan Logaritma",
+            "Eksponen dan Logaritma"
+          ]
+        },
+        {
+          "id": "G07",
+          "question": "Proyeksi skalar dan vektor ortogonal serta operasi penjumlahan vektor pada bidang",
+          "expected_bab": [
+            "Vektor dan Operasinya"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Vektor dan Operasinya",
+            "Vektor dan Operasinya",
+            "Vektor dan Operasinya"
+          ]
+        },
+        {
+          "id": "G11",
+          "question": "Menentukan nilai optimum fungsi objektif program linear dengan metode uji titik pojok daerah himpunan penyelesaian",
+          "expected_bab": [
+            "Sistem Persamaan dan Pertidaksamaan Linear"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Sistem Persamaan dan Pertidaksamaan Linear",
+            "Sistem Persamaan dan Pertidaksamaan Linear",
+            "Sistem Persamaan dan Pertidaksamaan Linear"
+          ]
+        },
+        {
+          "id": "G26",
+          "question": "Operasi perkalian matriks dan transpos matriks ordo 2x2",
+          "expected_bab": [
+            "Matriks"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Matriks",
+            "Matriks",
+            "Matriks"
+          ]
+        },
+        {
+          "id": "G19",
+          "question": "Menentukan komposisi fungsi (f o g)(x) jika f(x) = 2x + 1 dan g(x) = x^2",
+          "expected_bab": [
+            "Komposisi Fungsi dan Fungsi Invers"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Komposisi Fungsi dan Fungsi Invers",
+            "Komposisi Fungsi dan Fungsi Invers",
+            "Komposisi Fungsi dan Fungsi Invers"
+          ]
+        },
+        {
+          "id": "G24",
+          "question": "Menentukan nilai suku banyak polinomial dengan metode substitusi dan skema Horner",
+          "expected_bab": [
+            "Polinomial"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Polinomial",
+            "Polinomial",
+            "Polinomial"
+          ]
+        },
+        {
+          "id": "G20",
+          "question": "Menentukan fungsi invers f^-1(x) dari fungsi pecahan rasional f(x) = (2x + 3)/(x - 4)",
+          "expected_bab": [
+            "Komposisi Fungsi dan Fungsi Invers"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Komposisi Fungsi dan Fungsi Invers",
+            "Komposisi Fungsi dan Fungsi Invers",
+            "Komposisi Fungsi dan Fungsi Invers"
+          ]
+        },
+        {
+          "id": "G30",
+          "question": "Rotasi dan dilatasi serta komposisi transformasi geometri menggunakan matriks",
+          "expected_bab": [
+            "Transformasi Geometri"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Transformasi Geometri",
+            "Transformasi Geometri",
+            "Transformasi Geometri"
+          ]
+        },
+        {
+          "id": "G27",
+          "question": "Bagaimana cara mencari determinan dan invers matriks ordo 2x2?",
+          "expected_bab": [
+            "Matriks"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Matriks",
+            "Matriks",
+            "Matriks"
+          ]
+        },
+        {
+          "id": "G22",
+          "question": "Koefisien korelasi Pearson dan persamaan garis regresi linear pada analisis data bivariat",
+          "expected_bab": [
+            "Statistika: Analisis Data Bivariat"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Statistika: Analisis Data Bivariat",
+            "Sistem Persamaan dan Pertidaksamaan Linear",
+            "Sistem Persamaan dan Pertidaksamaan Linear"
+          ]
+        },
+        {
+          "id": "G33",
+          "question": "Domain dan asimtot tegak serta asimtot datar pada fungsi rasional dan fungsi akar",
+          "expected_bab": [
+            "Fungsi dan Pemodelannya",
+            "Komposisi Fungsi dan Fungsi Invers"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Komposisi Fungsi dan Fungsi Invers",
+            "Eksponen dan Logaritma",
+            "Fungsi dan Pemodelannya"
+          ]
+        },
+        {
+          "id": "G28",
+          "question": "Determinan matriks ordo 3x3 menggunakan aturan Sarrus dan ekspansi kofaktor",
+          "expected_bab": [
+            "Matriks"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Matriks",
+            "Matriks",
+            "Matriks"
+          ]
+        },
+        {
+          "id": "G46",
+          "question": "Menentukan integral tak tentu fungsi aljabar dan teknik integral substitusi",
+          "expected_bab": [
+            "Integral"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Integral",
+            "Integral",
+            "Integral"
+          ]
+        },
+        {
+          "id": "G42",
+          "question": "Menentukan limit fungsi aljabar dengan pemfaktoran dan perkalian sekawan serta limit di tak hingga",
+          "expected_bab": [
+            "Limit"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Limit",
+            "Limit",
+            "Limit"
+          ]
+        },
+        {
+          "id": "G39",
+          "question": "Syarat kekongruenan (S-Sd-S, Sd-S-Sd, S-S-S) dan kesebangunan dua segitiga",
+          "expected_bab": [
+            "Kekongruenan dan Kesebangunan"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Kekongruenan dan Kesebangunan",
+            "Kekongruenan dan Kesebangunan",
+            "Kekongruenan dan Kesebangunan"
+          ]
+        },
+        {
+          "id": "G37",
+          "question": "Peluang kejadian bersyarat P(A|B) dan kejadian saling bebas pada kombinatorik",
+          "expected_bab": [
+            "Kombinatorik dan Peluang",
+            "Peluang",
+            "Analisis Data dan Peluang"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Kombinatorik dan Peluang",
+            "Kombinatorik dan Peluang",
+            "Kombinatorik dan Peluang"
+          ]
+        },
+        {
+          "id": "G43",
+          "question": "Menentukan limit fungsi trigonometri lim_{x -> 0} (sin ax)/(bx) = a/b",
+          "expected_bab": [
+            "Limit"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Limit",
+            "Limit",
+            "Limit"
+          ]
+        },
+        {
+          "id": "G35",
+          "question": "Cicilan pinjaman, perhitungan bunga majemuk M_n = M_0(1 + i)^n, dan anuitas pada investasi",
+          "expected_bab": [
+            "Investasi dan Pinjaman",
+            "Barisan dan Deret"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Investasi dan Pinjaman",
+            "Investasi dan Pinjaman",
+            "Investasi dan Pinjaman"
+          ]
+        },
+        {
+          "id": "G48",
+          "question": "Distribusi peluang binomial P(X = x) = C(n, x) p^x q^(n-x) dan distribusi normal baku Z",
+          "expected_bab": [
+            "Analisis Data dan Peluang",
+            "Kombinatorik dan Peluang",
+            "Peluang"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Analisis Data dan Peluang",
+            "Analisis Data dan Peluang",
+            "Analisis Data dan Peluang"
+          ]
+        },
+        {
+          "id": "G41",
+          "question": "Persamaan elips, parabola, dan hiperbola pada irisan kerucut geometri analitik",
+          "expected_bab": [
+            "Geometri Analitik"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Geometri Analitik",
+            "Geometri Analitik",
+            "Geometri Analitik"
+          ]
+        },
+        {
+          "id": "G47",
+          "question": "Bagaimana menghitung luas daerah yang dibatasi kurva dan volume benda putar dengan integral tentu?",
+          "expected_bab": [
+            "Integral"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Integral",
+            "Integral",
+            "Integral"
+          ]
+        },
+        {
+          "id": "G49",
+          "question": "Tabel kebenaran konjungsi, disjungsi, implikasi, dan biimplikasi pada logika matematika",
+          "expected_bab": [
+            "Logika Matematika (Pengayaan, di luar CP Kurikulum Merdeka)"
+          ],
+          "expected_kelas": "Tambahan",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Logika Matematika (Pengayaan, di luar CP Kurikulum Merdeka)",
+            "Logika Matematika (Pengayaan, di luar CP Kurikulum Merdeka)",
+            "Logika Matematika (Pengayaan, di luar CP Kurikulum Merdeka)"
+          ]
+        },
+        {
+          "id": "G50",
+          "question": "Penarikan kesimpulan modus ponens, modus tollens, dan silogisme serta negasi pernyataan berkuantor",
+          "expected_bab": [
+            "Logika Matematika (Pengayaan, di luar CP Kurikulum Merdeka)"
+          ],
+          "expected_kelas": "Tambahan",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Logika Matematika (Pengayaan, di luar CP Kurikulum Merdeka)",
+            "Logika Matematika (Pengayaan, di luar CP Kurikulum Merdeka)",
+            "Logika Matematika (Pengayaan, di luar CP Kurikulum Merdeka)"
+          ]
+        },
+        {
+          "id": "G01",
+          "question": "Sederhanakan bentuk eksponen dan tentukan nilai dari 2^5 * 2^-2 / 2^1",
+          "expected_bab": [
+            "Eksponen dan Logaritma"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Eksponen dan Logaritma",
+            "Eksponen dan Logaritma",
+            "Eksponen dan Logaritma"
+          ]
+        },
+        {
+          "id": "G16",
+          "question": "Menghitung peluang kejadian majemuk saling lepas pada pelemparan dua dadu",
+          "expected_bab": [
+            "Peluang",
+            "Kombinatorik dan Peluang",
+            "Analisis Data dan Peluang"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Kombinatorik dan Peluang",
+            "Kombinatorik dan Peluang",
+            "Kombinatorik dan Peluang"
+          ]
+        },
+        {
+          "id": "G15",
+          "question": "Menghitung ragam (varians) dan simpangan baku data berkelompok pada statistika",
+          "expected_bab": [
+            "Statistika"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Statistika",
+            "Statistika",
+            "Statistika"
+          ]
+        },
+        {
+          "id": "G29",
+          "question": "Translasi dan refleksi (pencerminan) titik terhadap garis y = x pada transformasi geometri",
+          "expected_bab": [
+            "Transformasi Geometri"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Transformasi Geometri",
+            "Transformasi Geometri",
+            "Transformasi Geometri"
+          ]
+        },
+        {
+          "id": "G23",
+          "question": "Langkah pembuktian deret bilangan dengan prinsip induksi matematika (langkah basis n=1 dan langkah induksi n=k+1)",
+          "expected_bab": [
+            "Induksi Matematika"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Induksi Matematika",
+            "Induksi Matematika",
+            "Induksi Matematika"
+          ]
+        },
+        {
+          "id": "G32",
+          "question": "Menyelesaikan persamaan trigonometri sin x = sin alpha dan rumus sudut rangkap cos 2x",
+          "expected_bab": [
+            "Fungsi dan Pemodelannya",
+            "Trigonometri"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Trigonometri",
+            "Trigonometri",
+            "Trigonometri"
+          ]
+        },
+        {
+          "id": "G36",
+          "question": "Permutasi dan kombinasi dengan aturan perkalian serta permutasi siklis (n - 1)!",
+          "expected_bab": [
+            "Kombinatorik dan Peluang",
+            "Peluang"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Peluang",
+            "Peluang",
+            "Peluang"
+          ]
+        },
+        {
+          "id": "G44",
+          "question": "Cara menentukan turunan fungsi aljabar dan trigonometri dengan aturan rantai",
+          "expected_bab": [
+            "Turunan Fungsi"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Sedang",
+          "rank": 2,
+          "rr": 0.5,
+          "top_babs": [
+            "Trigonometri",
+            "Turunan Fungsi",
+            "Turunan Fungsi"
+          ]
+        },
+        {
+          "id": "G38",
+          "question": "Jarak titik ke garis dan jarak titik ke bidang pada kubus ABCD.EFGH dimensi tiga",
+          "expected_bab": [
+            "Dimensi Tiga"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Dimensi Tiga",
+            "Dimensi Tiga",
+            "Dimensi Tiga"
+          ]
+        },
+        {
+          "id": "G14",
+          "question": "Menentukan mean, median, dan modus data tunggal serta kuartil data berkelompok",
+          "expected_bab": [
+            "Statistika"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Statistika",
+            "Statistika",
+            "Statistika"
+          ]
+        },
+        {
+          "id": "G05",
+          "question": "Hitung jumlah tak hingga deret geometri konvergen dengan suku pertama a = 12 dan rasio r = 1/3",
+          "expected_bab": [
+            "Barisan dan Deret"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Barisan dan Deret",
+            "Barisan dan Deret",
+            "Barisan dan Deret"
+          ]
+        },
+        {
+          "id": "G03",
+          "question": "Tentukan himpunan penyelesaian persamaan eksponen 3^(2x - 1) = 27",
+          "expected_bab": [
+            "Eksponen dan Logaritma"
+          ],
+          "expected_kelas": "10",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Eksponen dan Logaritma",
+            "Eksponen dan Logaritma",
+            "Eksponen dan Logaritma"
+          ]
+        },
+        {
+          "id": "G21",
+          "question": "Menentukan panjang busur, luas juring, dan sudut pusat serta sudut keliling pada lingkaran",
+          "expected_bab": [
+            "Lingkaran",
+            "Geometri Analitik"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Lingkaran",
+            "Lingkaran",
+            "Lingkaran"
+          ]
+        },
+        {
+          "id": "G31",
+          "question": "Identitas trigonometri jumlah dan selisih dua sudut sin(A + B) dan cos(A + B) pada fungsi dan pemodelannya",
+          "expected_bab": [
+            "Fungsi dan Pemodelannya",
+            "Trigonometri"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Fungsi dan Pemodelannya",
+            "Trigonometri",
+            "Trigonometri"
+          ]
+        },
+        {
+          "id": "G25",
+          "question": "Teorema sisa dan teorema faktor pada pembagian suku banyak polinomial oleh (x - a)(x - b)",
+          "expected_bab": [
+            "Polinomial"
+          ],
+          "expected_kelas": "11",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Polinomial",
+            "Polinomial",
+            "Polinomial"
+          ]
+        },
+        {
+          "id": "G34",
+          "question": "Pergeseran vertikal dan horizontal serta dilatasi grafik pada transformasi fungsi y = f(x - h) + k",
+          "expected_bab": [
+            "Transformasi Fungsi",
+            "Transformasi Geometri"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Mudah",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Transformasi Fungsi",
+            "Transformasi Fungsi",
+            "Transformasi Fungsi"
+          ]
+        },
+        {
+          "id": "G40",
+          "question": "Persamaan lingkaran dengan pusat (a, b) dan jari-jari r serta persamaan garis singgung lingkaran",
+          "expected_bab": [
+            "Geometri Analitik",
+            "Lingkaran"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Sedang",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Lingkaran",
+            "Lingkaran",
+            "Geometri Analitik"
+          ]
+        },
+        {
+          "id": "G45",
+          "question": "Menentukan persamaan garis singgung kurva, interval fungsi naik/turun, dan nilai stasioner maksimum/minimum dengan turunan",
+          "expected_bab": [
+            "Turunan Fungsi"
+          ],
+          "expected_kelas": "12",
+          "difficulty": "Sulit",
+          "rank": 1,
+          "rr": 1.0,
+          "top_babs": [
+            "Turunan Fungsi",
+            "Turunan Fungsi",
+            "Turunan Fungsi"
+          ]
+        }
+      ]
+    },
+    "splits": {
+      "train": {
+        "num_queries": 32,
+        "recall_at_k": {
+          "Recall@1": 1.0,
+          "Recall@3": 1.0,
+          "Recall@5": 1.0
+        },
+        "mrr": 1.0,
+        "ndcg_at_k": 0.9924
+      },
+      "val": {
+        "num_queries": 9,
+        "recall_at_k": {
+          "Recall@1": 0.8889,
+          "Recall@3": 1.0,
+          "Recall@5": 1.0
+        },
+        "mrr": 0.9444,
+        "ndcg_at_k": 0.9734
+      },
+      "test": {
+        "num_queries": 9,
+        "recall_at_k": {
+          "Recall@1": 1.0,
+          "Recall@3": 1.0,
+          "Recall@5": 1.0
+        },
+        "mrr": 1.0,
+        "ndcg_at_k": 1.0
+      }
+    },
+    "stratified_5fold_cv": {
+      "num_folds": 5,
+      "recall_at_5_mean": 1.0,
+      "recall_at_5_std": 0.0,
+      "mrr_mean": 0.99,
+      "mrr_std": 0.02,
+      "ndcg_at_5_mean": 0.9904,
+      "ndcg_at_5_std": 0.0091,
+      "per_fold_recall": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  },
+  "model_evaluation_and_error_analysis": {
+    "total_evaluated": 60,
+    "curriculum_evaluated": 50,
+    "trap_evaluated": 10,
+    "metrics_summary": {
+      "final_answer_accuracy": 1.0,
+      "mean_cot_fidelity_score": 1.0,
+      "latex_validity_rate": 1.0,
+      "guardrail_trap_rejection_rate": 1.0,
+      "overall_composite_score": 1.0
+    },
+    "error_taxonomy_distribution": {
+      "NONE": {
+        "count": 60,
+        "percentage": 100.0,
+        "description": "Jawaban benar, langkah penyelesaian CoT lengkap, dan format LaTeX valid."
+      }
+    }
+  },
+  "diagnostic_error_taxonomy_verification": {
+    "total_evaluated": 2,
+    "curriculum_evaluated": 2,
+    "trap_evaluated": 0,
+    "metrics_summary": {
+      "final_answer_accuracy": 0.5,
+      "mean_cot_fidelity_score": 1.0,
+      "latex_validity_rate": 0.5,
+      "guardrail_trap_rejection_rate": 0.0,
+      "overall_composite_score": 0.675
+    },
+    "error_taxonomy_distribution": {
+      "ARITHMETIC_CALCULATION_ERROR": {
+        "count": 1,
+        "percentage": 50.0,
+        "description": "Konsep, rumus, dan langkah benar, namun hasil perhitungan akhir meleset."
+      },
+      "LATEX_FORMATTING_ERROR": {
+        "count": 1,
+        "percentage": 50.0,
+        "description": "Sintaks rumus LaTeX rusak (delimiter $ / $$ atau kurung kurawal tidak seimbang)."
+      }
+    }
+  }
+}

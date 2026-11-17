@@ -420,6 +420,7 @@ class ChromaTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
+        cls.addClassCleanup(shutil.rmtree, cls.tmp, ignore_errors=True)
         cls.kb_dir = os.path.join(cls.tmp, "kb")
         cls.chroma_dir = os.path.join(cls.tmp, "chroma")
         write_kb(cls.kb_dir)
@@ -429,15 +430,14 @@ class ChromaTestCase(unittest.TestCase):
         ]
         for patcher in cls._patches:
             patcher.start()
+            cls.addClassCleanup(patcher.stop)
+        cls.addClassCleanup(rag_store.reset_chroma_clients)
         rag_store.reset_chroma_clients()
         cls.index_result = rag_store.index_curriculum_to_chromadb()
 
     @classmethod
     def tearDownClass(cls):
-        for patcher in cls._patches:
-            patcher.stop()
         rag_store.reset_chroma_clients()
-        shutil.rmtree(cls.tmp, ignore_errors=True)
 
     def setUp(self):
         rag_store._set_status("ready", "test")

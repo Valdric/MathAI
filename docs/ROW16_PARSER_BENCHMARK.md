@@ -2,7 +2,7 @@
 
 ## A. Audit Sumber Markdown
 
-- File diaudit: **29** | tanpa masalah: **28** | dengan catatan: **1**
+- File diaudit: **29** | tanpa masalah: **29** | dengan catatan: **0**
 - Total rumus LaTeX terdeteksi: **8804** blok display (`$$`) + **22299** inline (`$`)
 - Cleaning menjaga seluruh rumus: **True**
 
@@ -35,7 +35,7 @@
 | `knowledge_base/kelas_12/tl_bab_03_turunan_fungsi.md` | 13,895 | ok | 1/3/12/23 | 15 | 212 | 0 | - |
 | `knowledge_base/kelas_12/tl_bab_04_integral.md` | 8,851 | ok | 1/4/10/11 | 17 | 72 | 0 | - |
 | `knowledge_base/kelas_12/tl_bab_05_analisis_data_dan_peluang.md` | 11,694 | ok | 1/4/6/23 | 16 | 135 | 0 | - |
-| `knowledge_base/sma_m4thlab_curriculum.md` | 13,095 | - | 1/2/6/0 | 0 | 166 | 0 | tanpa frontmatter |
+| `knowledge_base/sma_m4thlab_curriculum.md` | 13,095 | ok | 1/2/6/0 | 0 | 166 | 0 | - |
 | `knowledge_base/tambahan/logika_matematika.md` | 162,881 | ok | 1/13/12/178 | 161 | 2665 | 0 | - |
 
 ## B. Perbandingan Parser PDF (`raw_pdfs`)

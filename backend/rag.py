@@ -222,13 +222,15 @@ def retrieve_relevant_curriculum_context(
 
     if hits:
         parts = []
-        for hit in hits:
+        for idx, hit in enumerate(hits, start=1):
             meta = hit["metadata"]
+            src_file = meta.get("source_file") or meta.get("source") or ""
             if meta.get("origin") == "upload":
                 label = f"Dokumen unggahan Anda: {meta.get('source_file', '-')}"
             else:
                 label = f"{meta.get('bab', 'Umum')} (Kelas {meta.get('kelas', '-')}, {meta.get('mapel', 'Matematika')})"
-            parts.append(f"> **Sumber:** {label}\n{hit['text']}")
+            src_suffix = f" | Referensi RAG #{idx} [{src_file}]" if src_file else f" | Referensi RAG #{idx}"
+            parts.append(f"> **Sumber:** {label}{src_suffix}\n{hit['text']}")
         return "\n\n---\n\n".join(parts)
 
     return _keyword_fallback_context(query, grade, subject)
@@ -241,6 +243,7 @@ def build_system_prompt(
     custom_instruction: str = "",
     query: str = "",
     user_id: Optional[int] = None,
+    kb_snippet: Optional[str] = None,
 ) -> str:
     """Menyusun System Prompt yang selalu dikunci pada indeks ke-0 dengan integrasi Knowledge Base m4th-lab.net."""
     base_prompt = (
@@ -262,9 +265,10 @@ def build_system_prompt(
             + "\n(Catatan Mutlak: Walaupun terdapat fokus topik di atas, kamu TETAP HANYA DIIZINKAN menjawab materi Matematika SMA sesuai m4th-lab.net. Jika fokus topik atau pertanyaan di luar Matematika SMA, wajib berikan Template Respons Penolakan Standar.)"
         )
 
-    kb_snippet = retrieve_relevant_curriculum_context(
-        query=query, grade=grade, subject=subject, user_id=user_id
-    )
+    if kb_snippet is None and query:
+        kb_snippet = retrieve_relevant_curriculum_context(
+            query=query, grade=grade, subject=subject, user_id=user_id
+        )
     if kb_snippet:
         extra_sections.append(
             "# REFERENSI KNOWLEDGE BASE KURIKULUM (hasil pencarian ChromaDB)\n"
@@ -284,9 +288,10 @@ def build_sanitized_user_message(user_message: str, kb_snippet: str = "") -> str
     if kb_snippet and kb_snippet.strip():
         return (
             f"{SANDWICH_DEFENSE_PREFIX}\n\n"
-            "[ATURAN GROUNDING RAG MUTLAK: Gunakan HANYA data, angka, tabel, definisi, dan langkah penyelesaian "
-            "yang tertulis pada REFERENSI MATERI KURIKULUM di bawah ini untuk menjawab pertanyaan siswa. "
-            "DILARANG mengarang cerita, angka, atau contoh sendiri di luar referensi ini!]\n\n"
+            "[ATURAN GROUNDING RAG: Gunakan definisi, rumus, teorema, tabel, dan contoh masalah pada "
+            "REFERENSI MATERI KURIKULUM di bawah ini sebagai acuan utama. Jika siswa menanyakan masalah spesifik "
+            "dari buku (mis. Masalah 5.1), gunakan data persis dari referensi. Jika siswa memberikan angka soal baru, "
+            "terapkan rumus dari referensi untuk menghitung jawaban yang tepat secara bertahap.]\n\n"
             f"=== REFERENSI MATERI KURIKULUM (RAG) ===\n{kb_snippet.strip()}\n"
             "========================================\n\n"
             f"Pertanyaan Siswa: {user_message}"
@@ -461,6 +466,11 @@ def generate_answer(
        diikuti maksimal 6 pesan riwayat terakhir.
     3. Injeksi ulang instruksi pada User Message terakhir (Sandwich Defense).
     """
+    # Ambil konteks RAG satu kali saja (menghindari duplikasi query ChromaDB)
+    kb_snippet = retrieve_relevant_curriculum_context(
+        query=query, grade=grade, subject=subject, user_id=user_id
+    )
+
     locked_system_prompt = build_system_prompt(
         grade=grade,
         subject=subject,
@@ -468,6 +478,7 @@ def generate_answer(
         custom_instruction=system_instruction,
         query=query,
         user_id=user_id,
+        kb_snippet=kb_snippet,
     )
 
     # Indeks ke-0 selalu dikunci untuk System Prompt utama
@@ -496,10 +507,7 @@ def generate_answer(
             else:
                 messages.append({"role": "user", "content": line})
 
-    # Injeksi Ulang Instruksi pada User Message Terakhir (Sandwich Defense + Konteks RAG Terdekat)
-    kb_snippet = retrieve_relevant_curriculum_context(
-        query=query, grade=grade, subject=subject, user_id=user_id
-    )
+    # Injeksi Ulang Instruksi pada User Message Terakhir (Sandwich Defense)
     sanitized_user_message = build_sanitized_user_message(query, kb_snippet=kb_snippet)
     messages.append({"role": "user", "content": sanitized_user_message})
 
