@@ -1,4 +1,5 @@
 import { API_URL } from '../config';
+import { useAuthStore } from '../store/authStore';
 
 interface IApiErrorPayload {
   detail?: string | Array<{ msg?: string }>;
@@ -65,6 +66,9 @@ export const apiRequest = async <T>(
   const data: unknown = await response.json().catch(() => null);
 
   if (!response.ok) {
+    if (response.status === 401 && token) {
+      useAuthStore.getState().logout();
+    }
     throw new Error(extractApiError(data, `${fallbackError} (HTTP ${response.status})`));
   }
 
