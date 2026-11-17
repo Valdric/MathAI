@@ -235,3 +235,140 @@ def enrich_chunk_with_ds_features(chunk: Dict[str, Any]) -> Dict[str, Any]:
     enriched["metadata"] = meta
     enriched["ds_features"] = feats
     return enriched
+
+
+def analyze_math_problem_hint(text: str) -> Dict[str, str]:
+    """
+    Menganalisis pola soal matematika SMA secara deterministik untuk:
+    1. Memperkaya query RAG (query_expansion) agar sub-topik yang tepat (mis. Aritmetika vs Geometri) berada di peringkat #1.
+    2. Menyediakan verifikasi perhitungan eksak (verification_hint) agar LLM 3B tidak salah memilih rumus atau salah hitung.
+    """
+    if not text or not text.strip():
+        return {"query_expansion": "", "verification_hint": ""}
+
+    clean = text.strip()
+    lower = clean.lower()
+    hints: List[str] = []
+    expansions: List[str] = []
+
+    # 1. Deteksi teks radikal PDF yang teracak saat copy-paste: "( 7 5)( 7 5) + −" -> (\sqrt{7}+\sqrt{5})(\sqrt{7}-\sqrt{5})
+    rad_match = re.search(r"\(\s*(\d+)\s+(\d+)\s*\)\s*\(\s*\1\s+\2\s*\)\s*[+＋]\s*[-−–]", clean)
+    if rad_match:
+        x_val, y_val = int(rad_match.group(1)), int(rad_match.group(2))
+        diff_val = x_val - y_val
+        expansions.append("eksponen bentuk akar merasionalkan perkalian sekawan")
+        hints.append(
+            f"- Rekonstruksi notasi akar dari PDF: Bentuk `({x_val} {y_val})({x_val} {y_val}) + -` adalah perkalian sekawan bentuk akar "
+            f"$(\\sqrt{{{x_val}}} + \\sqrt{{{y_val}}})(\\sqrt{{{x_val}}} - \\sqrt{{{y_val}}})$.\n"
+            f"- Rumus selisih kuadrat: $(a + b)(a - b) = a^2 - b^2$.\n"
+            f"- Perhitungan: $(\\sqrt{{{x_val}}})^2 - (\\sqrt{{{y_val}}})^2 = {x_val} - {y_val} = {diff_val}$."
+        )
+
+    # 2. Deteksi barisan bilangan eksplisit (misal: 3, 10, 17, 24, 31 atau 27, 24, 21)
+    if any(k in lower for k in ("barisan", "deret", "suku")):
+        seq_match = re.search(r"(?<![A-Za-z0-9_])(-?\d+(?:\s*,\s*-?\d+){2,})", clean)
+        if seq_match:
+            nums = [int(n.strip()) for n in seq_match.group(1).split(",")]
+            if len(nums) >= 3:
+                d1 = nums[1] - nums[0]
+                d2 = nums[2] - nums[1]
+                is_arith = all(nums[i + 1] - nums[i] == d1 for i in range(len(nums) - 1)) and d1 != 0
+                is_geom = (
+                    not is_arith
+                    and all(nums[i] != 0 for i in range(len(nums) - 1))
+                    and (nums[1] / nums[0] == nums[2] / nums[1])
+                )
+                if is_arith:
+                    a_val, b_val = nums[0], d1
+                    expansions.append("barisan aritmetika deret aritmetika Definisi Barisan Aritmetika Sifat Suku ke-n Barisan Aritmetika")
+                    line = (
+                        f"- Jenis barisan: **Barisan Aritmetika** (bukan geometri), karena selisih/beda dua suku berurutan tetap: "
+                        f"$b = u_2 - u_1 = {nums[1]} - ({nums[0]}) = {b_val}$, dengan suku pertama $a = u_1 = {a_val}$.\n"
+                        f"- Rumus suku ke-$n$ Barisan Aritmetika: $$u_n = a + (n - 1)b$$"
+                    )
+                    n_suku = re.search(r"suku\s+ke-\s*(\d+)", lower)
+                    n_jumlah = re.search(r"jumlah\s+(\d+)\s+suku", lower)
+                    if n_suku:
+                        n_val = int(n_suku.group(1))
+                        un_val = a_val + (n_val - 1) * b_val
+                        line += (
+                            f"\n- Perhitungan suku ke-{n_val} ($n = {n_val}$): "
+                            f"$$u_{{{n_val}}} = {a_val} + ({n_val} - 1) \\times ({b_val}) = {a_val} + {n_val - 1} \\times ({b_val}) = {a_val} + {(n_val - 1) * b_val} = {un_val}$$"
+                        )
+                    if n_jumlah:
+                        n_val = int(n_jumlah.group(1))
+                        sn_num = n_val * (2 * a_val + (n_val - 1) * b_val)
+                        sn_val = sn_num // 2 if sn_num % 2 == 0 else sn_num / 2
+                        line += (
+                            f"\n- Rumus jumlah $n$ suku pertama Deret Aritmetika: $$S_n = \\frac{{n}}{{2}}(2a + (n - 1)b)$$\n"
+                            f"- Perhitungan $S_{{{n_val}}}$: $$S_{{{n_val}}} = \\frac{{{n_val}}}{{2}}(2({a_val}) + ({n_val} - 1)({b_val})) = {sn_val}$$"
+                        )
+                    hints.append(line)
+                elif is_geom:
+                    a_val = nums[0]
+                    r_val = nums[1] // nums[0] if nums[1] % nums[0] == 0 else nums[1] / nums[0]
+                    expansions.append("barisan geometri deret geometri rasio Sifat Suku ke-n Barisan Geometri")
+                    line = (
+                        f"- Jenis barisan: **Barisan Geometri**, dengan suku pertama $a = {a_val}$ dan rasio $r = \\frac{{{nums[1]}}}{{{nums[0]}}} = {r_val}$.\n"
+                        f"- Rumus suku ke-$n$ Barisan Geometri: $$u_n = a \\cdot r^{{n-1}}$$"
+                    )
+                    n_suku = re.search(r"suku\s+ke-\s*(\d+)", lower)
+                    if n_suku:
+                        n_val = int(n_suku.group(1))
+                        un_val = a_val * (r_val ** (n_val - 1))
+                        line += f"\n- Perhitungan suku ke-{n_val}: $$u_{{{n_val}}} = {a_val} \\cdot ({r_val})^{{{n_val - 1}}} = {un_val}$$"
+                    hints.append(line)
+
+    # 3. Deteksi dua suku diketahui (misal: U4 = 17 dan U9 = 39, atau suku ke-4 adalah 17 dan suku ke-9 adalah 39)
+    if not hints and "geometri" not in lower and "rasio" not in lower:
+        known_terms: Dict[int, int] = {}
+        for m in re.finditer(r"(?:suku\s+ke-(\d+)\s*(?:adalah|=|:)?\s*(-?\d+)|\b[uU]_?\{?(\d+)\}?\s*=\s*(-?\d+))", clean):
+            idx = int(m.group(1) or m.group(3))
+            val = int(m.group(2) or m.group(4))
+            known_terms[idx] = val
+        if len(known_terms) >= 2:
+            sorted_idx = sorted(known_terms.keys())
+            p, q = sorted_idx[0], sorted_idx[1]
+            up, uq = known_terms[p], known_terms[q]
+            b_val = (uq - up) // (q - p) if (uq - up) % (q - p) == 0 else round((uq - up) / (q - p), 4)
+            a_val = up - (p - 1) * b_val
+            if isinstance(a_val, float):
+                a_val = round(a_val, 4)
+            expansions.append("barisan aritmetika deret aritmetika eliminasi substitusi suku ke-n")
+            line = (
+                f"- Diketahui Barisan Aritmetika: $u_{{{p}}} = a + {p - 1}b = {up}$ dan $u_{{{q}}} = a + {q - 1}b = {uq}$.\n"
+                f"- Eliminasi: $({q - 1} - {p - 1})b = {uq} - ({up}) \\implies {q - p}b = {uq - up} \\implies b = {b_val}$.\n"
+                f"- Substitusi suku pertama: $a = {up} - {p - 1}({b_val}) = {a_val}$."
+            )
+            targets = [
+                int(tm.group(1) or tm.group(2))
+                for tm in re.finditer(r"(?:tentukan|nilai|hitung|berapa)[^0-9uU]*(?:suku\s+ke-(\d+)|\b[uU]_?\{?(\d+)\}?)", clean, re.IGNORECASE)
+            ]
+            for t_idx in targets:
+                if t_idx not in known_terms:
+                    ut_val = a_val + (t_idx - 1) * b_val
+                    if isinstance(ut_val, float) and ut_val.is_integer():
+                        ut_val = int(ut_val)
+                    line += f"\n- Suku ke-{t_idx}: $$u_{{{t_idx}}} = {a_val} + ({t_idx} - 1)({b_val}) = {ut_val}$$"
+            hints.append(line)
+
+    # 4. Deteksi Matriks 2x2: [[a, b], [c, d]] atau pmatrix/bmatrix
+    mat_match = re.search(
+        r"\[\s*\[\s*(-?\d+)\s*,\s*(-?\d+)\s*\]\s*,\s*\[\s*(-?\d+)\s*,\s*(-?\d+)\s*\]\s*\]"
+        r"|\\begin\{[pbv]matrix\}\s*(-?\d+)\s*&\s*(-?\d+)\s*\\\\\s*(-?\d+)\s*&\s*(-?\d+)\s*\\end\{[pbv]matrix\}",
+        clean,
+    )
+    if mat_match:
+        groups = [g for g in mat_match.groups() if g is not None]
+        if len(groups) == 4:
+            ma, mb, mc, md = (int(x) for x in groups)
+            det = ma * md - mb * mc
+            expansions.append("matriks determinan invers matriks ordo 2x2")
+            hints.append(
+                f"- Matriks ordo $2 \\times 2$: $\\det(A) = ad - bc = ({ma})({md}) - ({mb})({mc}) = {ma * md} - ({mb * mc}) = {det}$."
+            )
+
+    return {
+        "query_expansion": " ".join(expansions),
+        "verification_hint": "\n".join(hints),
+    }

@@ -20,6 +20,7 @@ import rag_store  # noqa: E402
 from data_science import (  # noqa: E402
     CurriculumChunkSchema,
     analyze_knowledge_base_eda,
+    analyze_math_problem_hint,
     build_golden_dataset,
     classify_math_error,
     enrich_chunk_with_ds_features,
@@ -181,6 +182,24 @@ class TestDataScienceDeliverables(unittest.TestCase):
         self.assertIn("FORMULA_CONCEPT_ERROR", suite["error_taxonomy_distribution"])
         self.assertIn("LATEX_FORMATTING_ERROR", suite["error_taxonomy_distribution"])
         self.assertIn("GUARDRAIL_BREACH", suite["error_taxonomy_distribution"])
+
+    def test_6_deterministic_math_hint_and_attachment_sanitization(self):
+        # 1. Barisan aritmetika eksplisit (Suku ke-48 dari 3, 10, 17, 24, 31)
+        h1 = analyze_math_problem_hint("Suku ke-48 dari barisan bilangan 3, 10, 17, 24, 31, ... adalah")
+        self.assertIn("barisan aritmetika", h1["query_expansion"])
+        self.assertIn("332", h1["verification_hint"])
+
+        # 2. Dua suku diketahui (U4 = 17 dan U9 = 39 -> Tentukan U41)
+        h2 = analyze_math_problem_hint("Diketahui barisan aritmetika U4 = 17 dan U9 = 39. Tentukan U41")
+        self.assertIn("b =", h2["verification_hint"])
+
+        # 3. Rekonstruksi notasi akar PDF "( 7 5)( 7 5) + −"
+        h3 = analyze_math_problem_hint("Bentuk yang paling sederhana dari ( 7 5)( 7 5) + − adalah")
+        self.assertIn("= 2", h3["verification_hint"])
+
+        # 4. Matriks 2x2 determinan
+        h4 = analyze_math_problem_hint("Soal matriks ordo 2x2: A = [[1, 2], [3, 4]]")
+        self.assertIn("-2", h4["verification_hint"])
 
 
 if __name__ == "__main__":

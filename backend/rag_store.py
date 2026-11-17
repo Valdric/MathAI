@@ -457,6 +457,30 @@ def list_user_documents(user_id: int, client=None) -> List[Dict[str, Any]]:
     return sorted(grouped.values(), key=lambda d: d.get("uploaded_at") or "", reverse=True)
 
 
+def get_user_document_text(user_id: int, filename: str, max_chars: int = 6000, client=None) -> str:
+    """Isi dokumen unggahan milik user_id (urut chunk_index), dipotong max_chars. '' bila tidak ada / bukan miliknya."""
+    if chromadb is None or not filename:
+        return ""
+    collection = get_upload_collection(client)
+    candidates = [filename]
+    sanitized = re.sub(r"[^A-Za-z0-9_.-]+", "_", filename).strip("._")
+    if sanitized and sanitized not in candidates:
+        candidates.append(sanitized)
+    data: Dict[str, Any] = {}
+    for cand in candidates:
+        where = {"$and": [{"uploaded_by": int(user_id)}, {"source_file": cand}]}
+        data = collection.get(where=where, include=["documents", "metadatas"])
+        if data.get("documents"):
+            break
+    pairs = sorted(
+        zip(data.get("metadatas") or [], data.get("documents") or []),
+        key=lambda p: (p[0] or {}).get("chunk_index", 0),
+    )
+    # Buang prefix breadcrumb "[nama-file]" di tiap chunk agar tidak berulang
+    texts = [re.sub(r"^\[[^\]\n]*\]\n", "", doc or "") for _, doc in pairs]
+    return "\n".join(texts)[:max_chars]
+
+
 def delete_user_document(user_id: int, filename: str, client=None) -> int:
     collection = get_upload_collection(client)
     where = {"$and": [{"uploaded_by": int(user_id)}, {"source_file": filename}]}

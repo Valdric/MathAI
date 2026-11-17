@@ -14,6 +14,7 @@ Modul:
 from .eda_profiling import analyze_knowledge_base_eda
 from .validation import validate_chunks_statistical, CurriculumChunkSchema, GoldenQuerySchema
 from .feature_engineering import (
+    analyze_math_problem_hint,
     extract_math_features,
     enrich_chunk_with_ds_features,
     normalize_math_notation,

@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Menu, Send, BookOpen, MessageSquare, Paperclip, FileText, X, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Menu, Send, BookOpen, MessageSquare, Paperclip, X, Loader2 } from 'lucide-react';
 import { useChatStore } from '../../../store/chatStore';
 import { useAuthStore } from '../../../store/authStore';
 import { API_URL } from '../../../config';
@@ -7,43 +7,17 @@ import { ChatBubble } from '../../molecules/ChatBubble';
 import { ProfileMenu } from '../../molecules/ProfileMenu';
 import { WelcomeForm } from '../WelcomeForm';
 
-interface IUploadedDoc {
-  filename: string;
-  chunks: number;
-  kelas?: string | null;
-  bab?: string | null;
-}
-
 export const ChatArea: React.FC = () => {
   const { chats, activeChatId, isLoading, sendMessage, toggleSidebar } = useChatStore();
   const token = useAuthStore((state) => state.token);
   const [inputText, setInputText] = useState('');
-  const [uploadedDocs, setUploadedDocs] = useState<IUploadedDoc[]>([]);
+  const [activeAttachment, setActiveAttachment] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadNotice, setUploadNotice] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeChat = chats.find((c) => c.id === activeChatId);
-
-  const fetchUploadedDocs = useCallback(async () => {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_URL}/api/documents`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUploadedDocs(data.documents || []);
-      }
-    } catch {
-      // Abaikan jika gagal memuat daftar dokumen awal
-    }
-  }, [token]);
-
-  useEffect(() => {
-    fetchUploadedDocs();
-  }, [fetchUploadedDocs]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,13 +39,13 @@ export const ChatArea: React.FC = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (res.status === 401) {
+          useAuthStore.getState().logout();
+        }
         throw new Error(data.detail || `Gagal mengunggah file (${res.status})`);
       }
-      setUploadNotice({
-        type: 'ok',
-        text: data.message || `File ${file.name} berhasil diindeks ke RAG.`,
-      });
-      await fetchUploadedDocs();
+      setUploadNotice(null);
+      setActiveAttachment(data.filename || file.name);
     } catch (err: any) {
       setUploadNotice({
         type: 'err',
@@ -79,22 +53,6 @@ export const ChatArea: React.FC = () => {
       });
     } finally {
       setIsUploading(false);
-    }
-  };
-
-  const handleDeleteDoc = async (filename: string) => {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_URL}/api/documents/${encodeURIComponent(filename)}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setUploadedDocs((prev) => prev.filter((d) => d.filename !== filename));
-        setUploadNotice({ type: 'ok', text: `Dokumen ${filename} dihapus dari RAG.` });
-      }
-    } catch {
-      setUploadNotice({ type: 'err', text: `Gagal menghapus dokumen ${filename}.` });
     }
   };
 
@@ -109,9 +67,12 @@ export const ChatArea: React.FC = () => {
 
   const handleSend = () => {
     const text = inputText.trim();
-    if (!text || isLoading) return;
-    sendMessage(text);
+    if ((!text && !activeAttachment) || isLoading || isUploading) return;
+    const finalText = text || `Tolong analisis dan kerjakan soal pada file ${activeAttachment}.`;
+    sendMessage(finalText, activeAttachment);
     setInputText('');
+    setActiveAttachment(null);
+    setUploadNotice(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -209,17 +170,11 @@ export const ChatArea: React.FC = () => {
 
           {/* Input Section */}
           <footer className="px-4 py-4 md:px-8 border-t border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-950/50 backdrop-blur-xl shrink-0 flex flex-col items-center gap-2">
-            {/* Uploaded Documents & Upload Notice */}
-            {(uploadedDocs.length > 0 || uploadNotice) && (
+            {/* Active Attachment preview card (only shown before sending) or error notice */}
+            {(activeAttachment || (uploadNotice && uploadNotice.type === 'err')) && (
               <div className="w-full max-w-3xl flex flex-col gap-1.5">
-                {uploadNotice && (
-                  <div
-                    className={`flex items-center justify-between text-xs px-3 py-1.5 rounded-lg border ${
-                      uploadNotice.type === 'ok'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300'
-                    }`}
-                  >
+                {uploadNotice && uploadNotice.type === 'err' && (
+                  <div className="flex items-center justify-between text-xs px-3 py-1.5 rounded-lg border bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300">
                     <span className="truncate">{uploadNotice.text}</span>
                     <button
                       onClick={() => setUploadNotice(null)}
@@ -231,29 +186,39 @@ export const ChatArea: React.FC = () => {
                   </div>
                 )}
 
-                {uploadedDocs.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {uploadedDocs.map((doc) => (
+                {/* Active Attachment for upcoming message (clears immediately when sent) */}
+                {activeAttachment && (
+                  <div className="flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-xs">
+                    <div className="flex items-center gap-3 truncate">
                       <div
-                        key={doc.filename}
-                        className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs px-2.5 py-1 rounded-full shadow-xs"
-                        title={`Terindeks di ChromaDB (${doc.chunks} potongan teks)`}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs uppercase ${
+                          activeAttachment.toLowerCase().endsWith('.pdf')
+                            ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200/60 dark:border-red-900/40'
+                            : activeAttachment.toLowerCase().endsWith('.docx')
+                            ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/40'
+                            : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/40'
+                        }`}
                       >
-                        <FileText size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span className="truncate max-w-44 font-medium">{doc.filename}</span>
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                          ({doc.chunks})
-                        </span>
-                        <button
-                          onClick={() => handleDeleteDoc(doc.filename)}
-                          className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors ml-0.5"
-                          title={`Hapus ${doc.filename} dari RAG`}
-                          aria-label={`Hapus ${doc.filename}`}
-                        >
-                          <X size={12} />
-                        </button>
+                        {activeAttachment.split('.').pop()?.toUpperCase() || 'FILE'}
                       </div>
-                    ))}
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-xs text-slate-800 dark:text-slate-100 truncate" title={activeAttachment}>
+                          {activeAttachment}
+                        </span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          Dokumen siap dikirim bersama pesan Anda
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveAttachment(null)}
+                      className="ml-2 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+                      title="Lepas lampiran dari pertanyaan ini"
+                      aria-label="Lepas lampiran"
+                    >
+                      <X size={15} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -292,7 +257,7 @@ export const ChatArea: React.FC = () => {
               />
               <button
                 onClick={handleSend}
-                disabled={!inputText.trim() || isLoading}
+                disabled={(!inputText.trim() && !activeAttachment) || isLoading || isUploading}
                 className="flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md active:scale-95 transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
                 aria-label="Kirim pesan"
               >
