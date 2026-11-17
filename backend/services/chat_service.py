@@ -65,8 +65,13 @@ class ChatService:
 
         print(f"Menerima pertanyaan di chat {chat_id}: {user_question}")
 
-        # Simpan pesan user
-        user_msg = Message(chat_id=chat.id, sender="user", text=user_question)
+        # Simpan pesan user (dengan tag [attachment: ...] jika terdapat dokumen)
+        saved_text = (
+            f"[attachment: {msg_in.attachment}]\n{user_question}"
+            if msg_in.attachment and not user_question.startswith("[attachment:")
+            else user_question
+        )
+        user_msg = Message(chat_id=chat.id, sender="user", text=saved_text)
         self.db.add(user_msg)
         
         # Update updated_at di chat session
@@ -74,9 +79,10 @@ class ChatService:
         chat.updated_at = datetime.utcnow()
         self.db.commit()
         
-        return self.generate_ai_reply(chat, user_msg, grade, subject)
+        return self.generate_ai_reply(chat, user_msg, grade, subject, attachment=msg_in.attachment)
 
-    def generate_ai_reply(self, chat: ChatSession, user_msg: Message, grade: str, subject: str) -> dict:
+    def generate_ai_reply(self, chat: ChatSession, user_msg: Message, grade: str, subject: str, attachment: str = None) -> dict:
+        import re
         from rag import MAX_HISTORY_MESSAGES, SMA_MATH_SYSTEM_PROMPT, generate_answer
 
         # Batasi Context Window Riwayat Chat: hanya ambil 6 pesan terakhir sebelum pesan saat ini
@@ -92,19 +98,32 @@ class ChatService:
         history_messages = [
             {
                 "role": "user" if msg.sender == "user" else "assistant",
-                "content": msg.text,
+                "content": re.sub(r"^\[attachment:\s*[^\]]+\]\n?", "", msg.text),
             }
             for msg in past_messages
         ]
 
+        # Jika attachment tidak disertakan pada pesan ini, periksa pesan-pesan sebelumnya pada sesi chat ini
+        if not attachment:
+            for msg in reversed(past_messages):
+                match = re.search(r"^\[attachment:\s*([^\]]+)\]", msg.text)
+                if match:
+                    attachment = match.group(1).strip()
+                    break
+
+        clean_query = re.sub(r"^\[attachment:\s*[^\]]+\]\n?", "", user_msg.text).strip()
+        if not clean_query:
+            clean_query = f"Tolong kerjakan dan jelaskan soal pada file {attachment}."
+
         try:
             ai_response = generate_answer(
-                query=user_msg.text,
+                query=clean_query,
                 system_instruction=SMA_MATH_SYSTEM_PROMPT,
                 history_messages=history_messages,
                 grade=grade,
                 subject=subject,
                 user_id=chat.user_id,
+                attachment=attachment,
             )
         except Exception as e:
             error_msg = str(e)

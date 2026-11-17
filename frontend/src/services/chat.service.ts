@@ -21,6 +21,7 @@ export interface IAskQuestionPayload {
   question: string;
   grade: string | null;
   subject: string | null;
+  attachment?: string | null;
 }
 
 export interface IAskQuestionResponse {
