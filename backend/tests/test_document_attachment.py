@@ -89,15 +89,13 @@ class TestDocumentAttachment(unittest.TestCase):
         self.assertIn("soal_auto.pdf", user_msg)
         self.assertIn("Soal matriks ordo 2x2", user_msg)
 
-    def test_step_by_step_instruction_enforced(self):
+    def test_rag_grounding_instruction_enforced(self):
         user_msg = build_sanitized_user_message(
             "Diketahui barisan aritmatika 27, 24, 21. Jumlah 20 suku pertama adalah...",
             kb_snippet="Deret Aritmetika",
         )
-        self.assertIn("PANDUAN PENYELESAIAN SOAL MATEMATIKA SMA", user_msg)
-        self.assertIn("DILARANG KERAS HANYA menuliskan opsi huruf", user_msg)
-        self.assertIn("Diketahui & Ditanyakan", user_msg)
-        self.assertIn("Langkah Perhitungan", user_msg)
+        self.assertIn("ATURAN GROUNDING RAG MUTLAK", user_msg)
+        self.assertIn("REFERENSI MATERI KURIKULUM (RAG)", user_msg)
 
     @patch("rag._call_ollama_chat")
     @patch("rag.retrieve_relevant_curriculum_context")

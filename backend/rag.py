@@ -136,13 +136,12 @@ Saat menjawab pertanyaan Matematika SMA yang valid, ikuti struktur ini:
 2. **Format Penulisan Rumus (LaTeX):**
    - Gunakan `$...$` untuk notasi matematika sebaris (*inline math*), contoh: $f(x) = x^2 + 2x + 1$.
    - Gunakan `$$...$$` untuk blok persamaan utama atau langkah perhitungan bertingkat agar rapi saat di-render oleh antarmuka web (MathJax / KaTeX).
-3. **Struktur Penyelesaian Soal (WAJIB LENGKAP & BERTAHAP):**
-   - **Identifikasi Materi:** Sebutkan bab/topik materi SMA yang relevan (contoh: *Materi: Barisan dan Deret Aritmetika - Kelas X*).
-   - **Diketahui & Ditanyakan:** Tuliskan besaran/parameter yang diketahui dari soal (contoh: suku pertama $a$, beda $b$, banyak suku $n$).
-   - **Konsep / Rumus Dasar:** Tuliskan rumus yang akan digunakan menggunakan notasi LaTeX ($...$ atau $$...$$).
-   - **Langkah Penyelesaian Bertahap:** Jabarkan perhitungan matematika langkah demi langkah (*step-by-step*) dengan jelas tanpa melompati alur perhitungan aljabar.
-   - **Kesimpulan & Jawaban Akhir:** Tuliskan hasil akhir dengan tegas, dan sebutkan opsi pilihan ganda yang sesuai jika soal memiliki pilihan ganda.
-   - **PERINGATAN MUTLAK:** DILARANG KERAS HANYA menuliskan opsi huruf (misal: "B. -30") atau angka akhir saja! Kamu adalah asisten tutor belajar, sehingga seluruh proses perhitungan wajib dijabarkan secara mendidik dan terstruktur agar siswa memahami alur logikanya."""
+3. **Struktur Penyelesaian Soal:**
+   - **Identifikasi Materi:** Sebutkan bab/topik materi SMA yang relevan (contoh: *Materi: Turunan Fungsi Trigonometri - Kelas XII*).
+   - **Diketahui & Ditanyakan:** Rangkum informasi penting dari soal.
+   - **Konsep / Rumus Dasar:** Tuliskan rumus atau teorema yang akan digunakan sebelum memasukkan angka.
+   - **Langkah Penyelesaian:** Jabarkan perhitungan langkah demi langkah (*step-by-step*) tanpa melompati proses aljabar yang penting agar siswa paham alur logikanya.
+   - **Kesimpulan / Jawaban Akhir:** Tegaskan hasil akhir dengan jelas."""
 
 SANDWICH_DEFENSE_PREFIX = (
     "[INSTRUKSI SISTEM: Jawab HANYA jika pesan berikut berkaitan dengan Matematika SMA. "
@@ -303,49 +302,33 @@ def build_sanitized_user_message(
     doc_context: str = "",
     attachment_name: str = "",
 ) -> str:
-    """Injeksi Ulang Instruksi pada User Message Terakhir (Sandwich Defense) beserta konteks Dokumen Siswa."""
-    sections = []
-
-    pedagogical_instruction = (
-        "[PANDUAN PENYELESAIAN SOAL MATEMATIKA SMA]:\n"
-        "Selesaikan soal matematika siswa di bawah ini secara mendidik, bertahap, runtut, dan terstruktur:\n"
-        "1. **Diketahui & Ditanyakan**: Tuliskan kembali bunyi soal yang dikerjakan secara ringkas, serta variabel dan angka yang diketahui.\n"
-        "2. **Rumus Dasar**: Tuliskan rumus matematika SMA yang digunakan dalam format notasi LaTeX ($...$ atau $$...$$).\n"
-        "3. **Langkah Perhitungan Bertahap**:\n"
-        "   - Tuliskan bentuk persamaan matematis dari setiap informasi yang diketahui pada soal (misal Persamaan 1 dan Persamaan 2).\n"
-        "   - Lakukan eliminasi atau substitusi aljabar dengan teliti untuk menemukan nilai variabel (seperti suku pertama $a$, beda $b$, rasio $r$, dll.).\n"
-        "   - Tuliskan langkah perhitungan aljabar secara runtut dan akurat tanpa melompati tahapannya.\n"
-        "   - Jika pada naskah soal terdapat angka yang menghasilkan pecahan sedangkan opsi bertipe bulat (misal salah cetak pada naskah narasumber), jelaskan hasil hitung eksak serta analisis opsi yang dimaksud.\n"
-        "4. **Kesimpulan & Opsi**: Tuliskan hasil akhir dengan tegas dan sebutkan opsi pilihan ganda yang sesuai (A, B, C, D, atau E).\n"
-        "DILARANG KERAS HANYA menuliskan opsi huruf (misal: 'B. -30' atau 'Rp. 37.125.000,00') atau jawaban singkat tanpa langkah penyelesaian lengkap!"
-    )
-
+    """Injeksi Ulang Instruksi pada User Message Terakhir (Sandwich Defense) beserta konteks RAG / Dokumen."""
     if doc_context and doc_context.strip():
         att_label = f" ({attachment_name})" if attachment_name else ""
-        sections.append(
-            f"[INSTRUKSI DOKUMEN SISWA: Siswa melampirkan dokumen{att_label}.\n"
-            f"Urutan soal pada dokumen dimulai dari paling atas ke bawah secara berurutan:\n"
-            f"- Soal paling pertama / paling atas adalah Soal Nomor 1.\n"
-            f"- Soal berikutnya adalah Soal Nomor 2.\n"
-            f"- Soal berikutnya adalah Soal Nomor 3, dan seterusnya.\n\n"
-            f"Periksa isi dokumen di bawah. Selesaikan soal yang diminta oleh siswa (misalnya nomor 1) langkah demi langkah menggunakan notasi LaTeX ($...$ dan $$...$$).\n"
+        return (
+            f"{SANDWICH_DEFENSE_PREFIX}\n\n"
+            f"[ATURAN DOKUMEN SISWA: Siswa melampirkan dokumen{att_label}.\n"
+            f"Gunakan isi dokumen di bawah ini untuk menjawab atau menyelesaikan soal matematika siswa.\n"
             f"JANGAN menolak pertanyaan siswa selama isi dokumen memuat soal/materi Matematika SMA! "
             f"Tolak HANYA jika dokumen dan pertanyaan sama sekali tidak berkaitan dengan materi Matematika SMA.]\n\n"
             f"=== DOKUMEN / SOAL YANG DIUNGGAH SISWA{att_label} ===\n"
             f"{doc_context.strip()}\n"
             f"===========================================================\n\n"
-            f"{pedagogical_instruction}"
-        )
-    else:
-        sections.append(
-            f"[INSTRUKSI SISTEM: Jawab dan selesaikan pertanyaan Matematika SMA berikut secara bertahap. "
-            f"Gunakan rumus dan konsep matematika SMA yang sesuai. "
-            f"Tolak HANYA jika pesan sama sekali tidak berkaitan dengan pelajaran Matematika.]\n\n"
-            f"{pedagogical_instruction}"
+            f"Pertanyaan Siswa: {user_message}"
         )
 
-    sections.append(f"Pertanyaan Siswa:\n{user_message}")
-    return "\n\n".join(sections)
+    if kb_snippet and kb_snippet.strip():
+        return (
+            f"{SANDWICH_DEFENSE_PREFIX}\n\n"
+            "[ATURAN GROUNDING RAG MUTLAK: Gunakan HANYA data, angka, tabel, definisi, dan langkah penyelesaian "
+            "yang tertulis pada REFERENSI MATERI KURIKULUM di bawah ini untuk menjawab pertanyaan siswa. "
+            "DILARANG mengarang cerita, angka, atau contoh sendiri di luar referensi ini!]\n\n"
+            f"=== REFERENSI MATERI KURIKULUM (RAG) ===\n{kb_snippet.strip()}\n"
+            "========================================\n\n"
+            f"Pertanyaan Siswa: {user_message}"
+        )
+
+    return f"{SANDWICH_DEFENSE_PREFIX}\n\nPertanyaan Siswa: {user_message}"
 
 
 def _docx_to_markdown(doc) -> str:
