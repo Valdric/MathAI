@@ -1,2 +1,2 @@
-export * from './VerifiedMaterialCard';
+export { VerifiedMaterialCard } from './VerifiedMaterialCard';
 

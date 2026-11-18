@@ -11,6 +11,8 @@ import {
   BookOpen,
   AlertTriangle,
   Lightbulb,
+  Sigma,
+  HelpCircle,
 } from 'lucide-react';
 import type { ICurriculumTopicDetail } from '../../../data/curriculumData';
 
@@ -114,7 +116,7 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
-            <span>📑</span>
+            <BookOpen size={13} className="shrink-0" />
             <span>Materi Lengkap</span>
           </button>
 
@@ -126,7 +128,7 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
-            <Lightbulb size={13} />
+            <Lightbulb size={13} className="shrink-0" />
             <span>Konsep & Definisi</span>
           </button>
 
@@ -138,7 +140,7 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
-            <span>📐</span>
+            <Sigma size={13} className="shrink-0" />
             <span>Rumus Inti ({data.formulas.length})</span>
           </button>
 
@@ -150,7 +152,7 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
-            <span>✍️</span>
+            <HelpCircle size={13} className="shrink-0" />
             <span>Contoh Soal</span>
           </button>
         </div>
@@ -213,7 +215,8 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <span>📐</span> Rumus Inti Terverifikasi
+                  <Sigma size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Rumus Inti Terverifikasi</span>
                 </span>
                 <span className="text-[11px] text-slate-400">
                   {data.formulas.length} Rumus Standar

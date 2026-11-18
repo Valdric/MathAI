@@ -16,6 +16,7 @@ export interface IChatState {
   activeChatId: string | null;
   searchQuery: string;
   isSidebarOpen: boolean;
+  isFocusMode: boolean;
   isSettingsOpen: boolean;
   isProfileOpen: boolean;
   isLoading: boolean;
@@ -34,6 +35,7 @@ export interface IChatState {
   sendMessage: (text: string, attachment?: string | null) => Promise<void>;
   setSearchQuery: (query: string) => void;
   toggleSidebar: () => void;
+  toggleFocusMode: () => void;
   toggleSettings: () => void;
   toggleProfile: () => void;
   clearAllData: () => void;
@@ -46,7 +48,8 @@ export const useChatStore = create<IChatState>()((set, get) => ({
   chats: [],
   activeChatId: null,
   searchQuery: '',
-  isSidebarOpen: false,
+  isSidebarOpen: typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
+  isFocusMode: false,
   isSettingsOpen: false,
   isProfileOpen: false,
   isLoading: false,
@@ -146,10 +149,11 @@ export const useChatStore = create<IChatState>()((set, get) => ({
         messages: [],
       };
 
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
       set((state) => ({
         chats: [newChat, ...state.chats],
         activeChatId: newChat.id,
-        isSidebarOpen: false,
+        isSidebarOpen: isMobile ? false : state.isSidebarOpen,
       }));
     } catch (err) {
       console.error(err);
@@ -157,7 +161,11 @@ export const useChatStore = create<IChatState>()((set, get) => ({
   },
 
   selectChat: (id: string) => {
-    set({ activeChatId: id, isSidebarOpen: false });
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    set((state) => ({
+      activeChatId: id,
+      isSidebarOpen: isMobile ? false : state.isSidebarOpen,
+    }));
     get().fetchMessages(id);
   },
 
@@ -315,6 +323,25 @@ export const useChatStore = create<IChatState>()((set, get) => ({
   },
 
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  toggleFocusMode: () => {
+    set((state) => {
+      const nextMode = !state.isFocusMode;
+      try {
+        if (nextMode) {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          }
+        } else {
+          if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+          }
+        }
+      } catch {
+        // Abaikan jika browser tidak mengizinkan fullscreen
+      }
+      return { isFocusMode: nextMode };
+    });
+  },
   toggleSettings: () => set((state) => ({ isSettingsOpen: !state.isSettingsOpen })),
   toggleProfile: () => set((state) => ({ isProfileOpen: !state.isProfileOpen })),
 
@@ -325,6 +352,7 @@ export const useChatStore = create<IChatState>()((set, get) => ({
       isSettingsOpen: false,
       isProfileOpen: false,
       isSidebarOpen: false,
+      isFocusMode: false,
     });
   },
 
