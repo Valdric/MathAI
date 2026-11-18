@@ -98,6 +98,9 @@ class MathAIEmbeddingFunction:
     dan kompatibel penuh dengan ChromaDB 0.5+ / 1.x.
     """
 
+    def __init__(self) -> None:
+        pass
+
     def __call__(self, input: List[str]) -> List[List[float]]:
         from embeddings import _deterministic_768d_fallback
         return [_deterministic_768d_fallback(t) for t in input]
@@ -116,6 +119,12 @@ class MathAIEmbeddingFunction:
     def name() -> str:
         return "mathai_deterministic_768d"
 
+    def default_space(self) -> str:
+        return "l2"
+
+    def supported_spaces(self) -> List[str]:
+        return ["cosine", "l2", "ip"]
+
     def get_config(self) -> Dict[str, Any]:
         return {"dim": 768}
 
@@ -123,6 +132,20 @@ class MathAIEmbeddingFunction:
     def build_from_config(config: Dict[str, Any]) -> "MathAIEmbeddingFunction":
         return MathAIEmbeddingFunction()
 
+    def validate_config_update(self, old_config: Dict[str, Any], new_config: Dict[str, Any]) -> None:
+        return None
+
+    @staticmethod
+    def validate_config(config: Dict[str, Any]) -> None:
+        return None
+
+
+if chromadb is not None:
+    try:
+        from chromadb.utils.embedding_functions import register_embedding_function
+        register_embedding_function(MathAIEmbeddingFunction)
+    except Exception:
+        pass
 
 _DEFAULT_EMBEDDING_FN = MathAIEmbeddingFunction()
 
@@ -145,6 +168,35 @@ def get_embedding_function(name: Optional[str] = None):
     raise ValueError(f"Embedding '{name}' tidak dikenali. Gunakan 'default', 'onnx', atau 'st:<model>'.")
 
 
+def _safe_get_or_create_collection(client, **kwargs):
+    """Membuka/membuat koleksi; migrasi otomatis bila konfigurasi embedding lama di disk bentrok."""
+    try:
+        return client.get_or_create_collection(**kwargs)
+    except ValueError as exc:
+        if "Embedding function conflict" not in str(exc):
+            raise
+        col_name = kwargs["name"]
+        existing_data: Dict[str, Any] = {}
+        try:
+            old_col = client.get_collection(name=col_name)
+            existing_data = old_col.get(include=["documents", "metadatas"])
+        except Exception:
+            pass
+        client.delete_collection(name=col_name)
+        _COLLECTION_TEXT_CACHE.clear()
+        new_col = client.get_or_create_collection(**kwargs)
+        ids = existing_data.get("ids") or []
+        docs = existing_data.get("documents") or []
+        metas = existing_data.get("metadatas") or []
+        for start in range(0, len(ids), 150):
+            new_col.upsert(
+                ids=ids[start:start + 150],
+                documents=docs[start:start + 150],
+                metadatas=metas[start:start + 150],
+            )
+        return new_col
+
+
 def get_knowledge_collection(client=None, name: Optional[str] = None, embedding_function=None):
     client = client or get_chroma_client()
     ef = embedding_function if embedding_function is not None else _DEFAULT_EMBEDDING_FN
@@ -153,12 +205,13 @@ def get_knowledge_collection(client=None, name: Optional[str] = None, embedding_
         "metadata": {"description": "MathAI SMA Curriculum Knowledge Base (Kemendikbud & m4th-lab.net)"},
         "embedding_function": ef,
     }
-    return client.get_or_create_collection(**kwargs)
+    return _safe_get_or_create_collection(client, **kwargs)
 
 
 def get_upload_collection(client=None):
     client = client or get_chroma_client()
-    return client.get_or_create_collection(
+    return _safe_get_or_create_collection(
+        client,
         name=UPLOAD_COLLECTION_NAME,
         metadata={"description": "Dokumen unggahan siswa (dibatasi per pengguna lewat metadata uploaded_by)"},
         embedding_function=_DEFAULT_EMBEDDING_FN,
@@ -509,17 +562,54 @@ _STOPWORDS_ID = {
     "sma", "matematika", "bab", "pengertian", "definisi", "berikan", "tuliskan",
 }
 
+_MATH_SYNONYM_MAP: Dict[str, List[str]] = {
+    "rerata": ["mean", "rata"],
+    "rataan": ["mean", "rata"],
+    "rata": ["mean", "rerata"],
+    "mean": ["rata", "rerata"],
+    "ragam": ["varian", "varians"],
+    "varians": ["varian", "ragam"],
+    "varian": ["varians", "ragam"],
+    "polinom": ["polinomial", "suku", "banyak"],
+    "polinomial": ["suku", "banyak"],
+    "cosinus": ["kosinus"],
+    "kosinus": ["cosinus"],
+    "pencerminan": ["refleksi"],
+    "refleksi": ["pencerminan"],
+    "pergeseran": ["translasi"],
+    "translasi": ["pergeseran"],
+    "perputaran": ["rotasi"],
+    "rotasi": ["perputaran"],
+    "aritmatika": ["aritmetika"],
+    "derivatif": ["turunan"],
+    "antiturunan": ["integral"],
+    "anuitas": ["pinjaman", "investasi"],
+}
+
 
 def _extract_query_terms(query: str) -> List[str]:
     q_lower = query.lower()
-    terms = [
+    raw_terms = [
         t for t in re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", q_lower)
         if len(t) >= 2 and t not in _STOPWORDS_ID and not t.isdigit()
     ]
-    return list(dict.fromkeys(terms))
+    expanded: List[str] = []
+    for t in raw_terms:
+        expanded.append(t)
+        for syn in _MATH_SYNONYM_MAP.get(t, ()):
+            expanded.append(syn)
+    if "suku banyak" in q_lower and "polinomial" not in expanded:
+        expanded.append("polinomial")
+    return list(dict.fromkeys(expanded))
 
 
 _GENERIC_BAB_WORDS = {"dan", "fungsi", "persamaan", "pertidaksamaan", "sistem", "analisis", "data", "pada"}
+_GENERIC_HEADING_MODIFIERS = _GENERIC_BAB_WORDS | {
+    "tunggal", "kelompok", "berkelompok", "ukuran", "sifat", "aturan", "bentuk",
+    "grafik", "operasi", "menentukan", "penyelesaian", "masalah", "bagian",
+    "umum", "lanjut", "dasar", "konsep", "jenis",
+}
+_EXAMPLE_HEADING_PREFIXES = ("contoh", "eksplorasi", "latihan", "uji kompetensi", "data:")
 
 
 def _lexical_bonus(query_lower: str, query_terms: List[str], doc_text: str, meta: Dict[str, Any]) -> float:
@@ -531,11 +621,32 @@ def _lexical_bonus(query_lower: str, query_terms: List[str], doc_text: str, meta
         return 0.0
     ratio = matched / len(query_terms)
     bonus = ratio * 0.45 + min(0.25, matched * 0.06)
-    # Bonus tambahan bila kata cocok tepat di judul subbab (heading_path / bab)
+
+    # Bonus tambahan bila kata cocok tepat di judul subbab (konsep spesifik > modifier generik)
     heading_haystack = f"{meta.get('bab', '')} {meta.get('heading_path', '')}".lower()
-    heading_matched = sum(1 for t in query_terms if t in heading_haystack)
-    if heading_matched:
-        bonus += min(0.85, heading_matched * 0.16)
+    specific_h_matched = sum(
+        1 for t in query_terms if t not in _GENERIC_HEADING_MODIFIERS and t in heading_haystack
+    )
+    generic_h_matched = sum(
+        1 for t in query_terms if t in _GENERIC_HEADING_MODIFIERS and t in heading_haystack
+    )
+    if specific_h_matched or generic_h_matched:
+        bonus += min(0.85, specific_h_matched * 0.20 + generic_h_matched * 0.05)
+
+    # Fokus pada judul terdalam (leaf heading: topic / sub_section / section)
+    leaf_heading = str(meta.get("topic") or meta.get("sub_section") or meta.get("section") or "").lower().strip()
+    if leaf_heading:
+        leaf_specific = sum(
+            1 for t in query_terms if t not in _GENERIC_HEADING_MODIFIERS and t in leaf_heading
+        )
+        if leaf_specific:
+            bonus += min(0.30, leaf_specific * 0.16)
+        # Prioritaskan chunk definisi/rumus di atas sub-chunk contoh soal jika user tidak meminta contoh
+        if leaf_heading.startswith(_EXAMPLE_HEADING_PREFIXES) and not any(
+            k in query_lower for k in ("contoh", "eksplorasi", "masalah", "latihan")
+        ):
+            bonus = max(0.0, bonus - 0.08)
+
     # Bonus anchor bab spesifik (mengatasi class imbalance bab besar vs bab kecil seperti Integral/Induksi)
     bab_lower = str(meta.get("bab", "")).lower()
     specific_bab_matched = sum(
@@ -612,7 +723,7 @@ def _run_query(collection, query: str, n_results: int, where: Optional[Dict[str,
                     continue
                 bonus = _lexical_bonus(q_lower, q_terms, doc, meta_dict)
                 if bonus >= 0.25:
-                    adj_dist = max(0.0001, round(0.95 / (1.0 + bonus * 2.5), 6))
+                    adj_dist = max(0.0001, round(0.90 / (1.0 + bonus * 2.5), 6))
                     by_id[cid] = {"id": cid, "text": doc, "metadata": meta_dict, "distance": adj_dist}
         except Exception:
             pass
@@ -665,10 +776,13 @@ def query_knowledge_chromadb(
                     hits.append(hit)
 
         if user_id is not None and collection is None:
-            uploads = get_upload_collection(client)
-            for hit in _run_query(uploads, query, n_results, {"uploaded_by": int(user_id)}):
-                hit["matched_grade"] = True
-                hits.append(hit)
+            try:
+                uploads = get_upload_collection(client)
+                for hit in _run_query(uploads, query, n_results, {"uploaded_by": int(user_id)}):
+                    hit["matched_grade"] = True
+                    hits.append(hit)
+            except Exception as upload_exc:
+                print(f"[ChromaDB Upload Retrieval Warning] {upload_exc}")
 
         hits.sort(key=lambda h: (0 if h.get("matched_grade", True) else 1, h["distance"]))
         return hits[:n_results]
