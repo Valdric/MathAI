@@ -137,7 +137,7 @@ export const WelcomeForm: React.FC = () => {
                     className={`flex flex-col items-center justify-center py-3 px-2 rounded-2xl border text-center transition-all duration-200 select-none cursor-pointer ${
                       isSelected
                         ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold shadow-sm ring-2 ring-emerald-500/20'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        : 'border-slate-200/90 dark:border-slate-800/80 bg-slate-50/80 dark:bg-slate-950/60 hover:bg-slate-100 dark:hover:bg-slate-800/70 text-slate-700 dark:text-slate-200'
                     }`}
                   >
                     <span className="text-sm md:text-base font-bold">{grade}</span>
