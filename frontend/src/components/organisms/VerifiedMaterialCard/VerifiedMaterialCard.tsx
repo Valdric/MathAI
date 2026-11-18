@@ -9,6 +9,9 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
+  BookOpen,
+  AlertTriangle,
+  Lightbulb,
 } from 'lucide-react';
 import type { ICurriculumTopicDetail } from '../../../data/curriculumData';
 
@@ -17,7 +20,10 @@ interface IVerifiedMaterialCardProps {
   grade?: string | null;
 }
 
+type TabType = 'all' | 'concept' | 'formulas' | 'example';
+
 export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ data, grade }) => {
+  const [activeTab, setActiveTab] = useState<TabType>('all');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isExampleOpen, setIsExampleOpen] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -98,43 +104,157 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
         </div>
       </div>
 
+      {/* Sub-Tabs Switcher */}
+      {!isCollapsed && (
+        <div className="flex items-center gap-1 px-4 md:px-5 pt-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/80 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'all'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <span>📑</span>
+            <span>Materi Lengkap</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('concept')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'concept'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <Lightbulb size={13} />
+            <span>Konsep & Definisi</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('formulas')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'formulas'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <span>📐</span>
+            <span>Rumus Inti ({data.formulas.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('example')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'example'
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <Sparkles size={13} />
+            <span>Contoh Soal</span>
+          </button>
+        </div>
+      )}
+
       {/* Collapsible Content */}
       {!isCollapsed && (
         <div className="p-4 md:p-5 flex flex-col gap-5 bg-slate-50/40 dark:bg-slate-900/40">
-          {/* Formula Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            {data.formulas.map((item, idx) => (
-              <div
-                key={idx}
-                className="flex flex-col justify-between p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-shadow"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1 mb-2">
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      {item.name}
-                    </span>
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                      {item.badge}
-                    </span>
-                  </div>
-                  <div className="py-2.5 text-center text-slate-900 dark:text-slate-100 overflow-x-auto select-all">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                    >
-                      {`$$${item.formula}$$`}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug border-t border-slate-100 dark:border-slate-800 pt-2 mt-2">
-                  {item.description}
-                </p>
+          {/* Section 1: Konsep & Pemahaman Inti */}
+          {(activeTab === 'all' || activeTab === 'concept') && (
+            <div className="flex flex-col gap-3.5 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                  <BookOpen size={16} />
+                </span>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  Pemahaman Konsep & Karakteristik Materi
+                </h3>
               </div>
-            ))}
-          </div>
 
-          {/* Interactive Example Walkthrough */}
-          {data.example && (
+              {/* Narasi Ringkasan Konsep */}
+              <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                {data.conceptSummary}
+              </p>
+
+              {/* Dua Kolom: Poin Kunci & Tips Ujian */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                {/* Kolom Kiri: Poin Kunci & Karakteristik */}
+                <div className="flex flex-col gap-2 p-3.5 rounded-lg bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-emerald-500" />
+                    Poin Kunci & Karakteristik
+                  </span>
+                  <ul className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300">
+                    {data.keyPoints?.map((point, pIdx) => (
+                      <li key={pIdx} className="flex items-start gap-2 leading-relaxed">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Kolom Kanan: Tips Ujian & Jebakan Soal */}
+                <div className="flex flex-col gap-2 p-3.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
+                    <AlertTriangle size={13} className="text-amber-600 dark:text-amber-400" />
+                    Tips Ujian & Jebakan Soal
+                  </span>
+                  <p className="text-xs text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
+                    {data.examTips}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Section 2: Formula Cards Grid */}
+          {(activeTab === 'all' || activeTab === 'formulas') && (
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <span>📐</span> Rumus Inti Terverifikasi
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  {data.formulas.length} Rumus Standar
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {data.formulas.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex flex-col justify-between p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-shadow"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-1 mb-2">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {item.name}
+                        </span>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                          {item.badge}
+                        </span>
+                      </div>
+                      <div className="py-2.5 text-center text-slate-900 dark:text-slate-100 overflow-x-auto select-all">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkMath]}
+                          rehypePlugins={[rehypeKatex]}
+                        >
+                          {`$$${item.formula}$$`}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug border-t border-slate-100 dark:border-slate-800 pt-2 mt-2">
+                      {item.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Interactive Example Walkthrough */}
+          {(activeTab === 'all' || activeTab === 'example') && data.example && (
             <div className="rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/20 dark:bg-emerald-950/10 p-4 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -148,7 +268,7 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
                 </div>
                 <button
                   onClick={() => setIsExampleOpen(!isExampleOpen)}
-                  className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                  className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <span>{isExampleOpen ? 'Tutup Langkah Detail' : 'Buka Langkah Detail'}</span>
                   {isExampleOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -203,4 +323,3 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
     </div>
   );
 };
-
