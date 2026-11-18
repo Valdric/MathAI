@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useChatStore } from '../../../store/chatStore';
 import { Button } from '../../atoms/Button';
-import { Sparkles, BookOpen } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { API_URL } from '../../../config';
 
 const GRADES = ['Kelas 10', 'Kelas 11', 'Kelas 12'];
@@ -110,11 +110,8 @@ export const WelcomeForm: React.FC = () => {
     <div className="flex-1 overflow-y-auto w-full h-full relative z-10 bg-slate-100/60 dark:bg-slate-950 p-4 md:p-8 flex flex-col items-center">
       {/* Floating Card Modal di Tengah Layar */}
       <div className="w-full max-w-xl my-auto bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl transition-all duration-300">
-        {/* Logo AI & Judul Sambutan (Utuh tanpa terpotong) */}
+        {/* Judul Sambutan */}
         <div className="flex flex-col items-center text-center mb-6 select-none">
-          <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-lg shadow-emerald-600/25 mb-3 text-white">
-            <Sparkles size={26} />
-          </div>
           <h1 className="text-xl md:text-2xl font-extrabold text-slate-800 dark:text-slate-100 mb-1.5 tracking-tight">
             Selamat Datang di MathAI
           </h1>
