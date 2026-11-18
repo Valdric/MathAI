@@ -9,6 +9,11 @@ html {
   padding: 0;
   overflow-x: hidden;
   background-color: transparent;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body,
@@ -35,4 +40,87 @@ body {
   #root {
     font-size: 16px;
   }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ==========================================================================
+   Modern Sleek Scrollbar Styles (Light & Dark Theme Matching)
+   Menyesuaikan warna scrollbar agar menyatu dengan background tema dan
+   menghilangkan scrollbar putih default Windows yang kontras tajam.
+   ========================================================================== */
+
+/* Firefox standard scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+html.dark,
+html.dark * {
+  scrollbar-color: #334155 transparent;
+}
+
+/* WebKit & Chromium browsers (Chrome, Edge, Opera, Brave, Safari) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: #059669;
+}
+
+/* Dark mode scrollbars */
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: #334155;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: #475569;
+}
+
+html.dark ::-webkit-scrollbar-thumb:active {
+  background-color: #10b981;
+}
+
+/* Hilangkan tombol panah atas/bawah scrollbar Windows default */
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }

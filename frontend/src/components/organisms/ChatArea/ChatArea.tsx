@@ -6,7 +6,6 @@ import {
   FileText,
   X,
   Loader2,
-  Share2,
   Maximize2,
   Minimize2,
   Calculator as CalcIcon,
@@ -31,16 +30,23 @@ interface IUploadedDoc {
 }
 
 export const ChatArea: React.FC = () => {
-  const { chats, activeChatId, isLoading, sendMessage, toggleSidebar } = useChatStore();
+  const {
+    chats,
+    activeChatId,
+    isLoading,
+    sendMessage,
+    isSidebarOpen,
+    toggleSidebar,
+    isFocusMode,
+    toggleFocusMode,
+  } = useChatStore();
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const [inputText, setInputText] = useState('');
   const [uploadedDocs, setUploadedDocs] = useState<IUploadedDoc[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadNotice, setUploadNotice] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
-  const [isFocusMode, setIsFocusMode] = useState(false);
   const [isCalcOpen, setIsCalcOpen] = useState(false);
-  const [shareToast, setShareToast] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -70,6 +76,17 @@ export const ChatArea: React.FC = () => {
   useEffect(() => {
     fetchUploadedDocs();
   }, [fetchUploadedDocs]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      // Jika user menekan ESC dan keluar dari mode fullscreen browser, sinkronkan state fokus
+      if (!document.fullscreenElement && isFocusMode) {
+        toggleFocusMode();
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [isFocusMode, toggleFocusMode]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -157,25 +174,17 @@ export const ChatArea: React.FC = () => {
     textareaRef.current?.focus();
   };
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setShareToast(true);
-    setTimeout(() => setShareToast(false), 2500);
-  };
-
   return (
-    <div
-      className={`flex-1 flex flex-col h-full bg-slate-50/60 dark:bg-slate-950/20 overflow-hidden relative transition-all ${
-        isFocusMode ? 'max-w-5xl mx-auto w-full' : ''
-      }`}
-    >
+    <div className="flex-1 flex flex-col h-full bg-slate-50/60 dark:bg-slate-950/20 overflow-hidden relative transition-all w-full">
       {/* Header Bar */}
       <header className="relative z-30 flex items-center justify-between px-4 md:px-6 py-3 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl shrink-0 select-none shadow-2xs">
         <div className="flex items-center gap-3 min-w-0">
           <button
+            type="button"
             onClick={toggleSidebar}
-            className="p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-700 dark:hover:text-slate-100 md:hidden"
-            aria-label="Buka menu"
+            className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
+            title={isSidebarOpen ? 'Tutup sidebar' : 'Buka sidebar'}
+            aria-label={isSidebarOpen ? 'Tutup sidebar' : 'Buka sidebar'}
           >
             <Menu size={20} />
           </button>
@@ -213,36 +222,26 @@ export const ChatArea: React.FC = () => {
 
         {/* Right Action Tools */}
         <div className="flex items-center gap-1.5 md:gap-2 pl-2 shrink-0">
-          {/* Toast Salin Link */}
-          {shareToast && (
-            <span className="hidden sm:inline text-xs text-emerald-600 dark:text-emerald-400 font-medium animate-fade-in mr-1">
-              Tautan disalin!
-            </span>
-          )}
-
           <button
-            onClick={handleShare}
-            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium transition-all"
-            title="Bagikan sesi pembahasan"
-          >
-            <Share2 size={13} className="text-slate-500" />
-            <span>Bagikan</span>
-          </button>
-
-          <button
-            onClick={() => setIsFocusMode(!isFocusMode)}
+            type="button"
+            onClick={toggleFocusMode}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
               isFocusMode
-                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-500/30 font-semibold'
                 : 'border-slate-200/80 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
             }`}
-            title="Mode Fokus (Memaksimalkan ruang baca)"
+            title={
+              isFocusMode
+                ? 'Keluar dari Mode Fokus (Esc)'
+                : 'Mode Fokus Penuh (Sembunyikan sidebar & maksimalkan layar)'
+            }
           >
             {isFocusMode ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-            <span className="hidden md:inline">Mode Fokus</span>
+            <span className="hidden md:inline">{isFocusMode ? 'Keluar Fokus' : 'Mode Fokus'}</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setIsCalcOpen(true)}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium transition-all"
             title="Buka kalkulator matematika"
@@ -269,7 +268,7 @@ export const ChatArea: React.FC = () => {
       ) : (
         <>
           <div className="flex-1 overflow-y-auto w-full px-4 md:px-8 py-5">
-            <div className="max-w-4xl mx-auto flex flex-col">
+            <div className={`${isFocusMode ? 'max-w-6xl' : 'max-w-4xl'} w-full mx-auto flex flex-col transition-all duration-300`}>
               {/* TAHAP 3: Kartu Materi & Rumus Terverifikasi Muncul */}
               {topicData && (
                 <VerifiedMaterialCard data={topicData} grade={activeChat.grade} />
@@ -316,7 +315,7 @@ export const ChatArea: React.FC = () => {
           <footer className="px-4 py-3 md:px-8 border-t border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl shrink-0 flex flex-col items-center gap-2.5">
             {/* Quick Suggestion Chips (Prompt Pills Sesuai Topik) */}
             {topicData?.quickChips && (
-              <div className="w-full max-w-3xl flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none select-none">
+              <div className={`w-full ${isFocusMode ? 'max-w-5xl' : 'max-w-3xl'} flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none select-none transition-all duration-300`}>
                 {topicData.quickChips.map((chip, cIdx) => (
                   <button
                     key={cIdx}
@@ -331,7 +330,7 @@ export const ChatArea: React.FC = () => {
 
             {/* Uploaded Documents List */}
             {(uploadedDocs.length > 0 || uploadNotice) && (
-              <div className="w-full max-w-3xl flex flex-col gap-1.5">
+              <div className={`w-full ${isFocusMode ? 'max-w-5xl' : 'max-w-3xl'} flex flex-col gap-1.5 transition-all duration-300`}>
                 {uploadNotice && (
                   <div
                     className={`flex items-center justify-between text-xs px-3 py-1.5 rounded-lg border ${
@@ -378,7 +377,7 @@ export const ChatArea: React.FC = () => {
             )}
 
             {/* Input Bar Form */}
-            <div className="w-full max-w-3xl flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 shadow-xs transition-all duration-200">
+            <div className={`w-full ${isFocusMode ? 'max-w-5xl' : 'max-w-3xl'} flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 shadow-xs transition-all duration-300`}>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -438,8 +437,8 @@ export const ChatArea: React.FC = () => {
               </button>
             </div>
 
-            <span className="text-[10px] md:text-xs text-slate-400 dark:text-slate-600 text-center select-none">
-              MathAI dirancang khusus silabus Kurikulum Merdeka &amp; m4th-lab.net. Jawaban diverifikasi step-by-step.
+            <span className="text-[11px] md:text-xs text-slate-400 dark:text-slate-500 text-center select-none pt-0.5">
+              MathAI adalah AI dan dapat membuat kesalahan. Periksa kembali rumus &amp; perhitungan penting.
             </span>
           </footer>
         </>
