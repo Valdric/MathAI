@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useChatStore } from '../../../store/chatStore';
-import { OptionCard } from '../../molecules/OptionCard';
 import { Button } from '../../atoms/Button';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, BookOpen } from 'lucide-react';
 import { API_URL } from '../../../config';
 
 const GRADES = ['Kelas 10', 'Kelas 11', 'Kelas 12'];
@@ -47,7 +46,8 @@ const DEFAULT_TOPICS_BY_GRADE: Record<string, string[]> = {
 
 export const WelcomeForm: React.FC = () => {
   const { activeChatId, setCurriculum } = useChatStore();
-  const [selectedGrade, setSelectedGrade] = useState<string | null>('Kelas 10');
+  // Mulai dengan null agar awalnya hanya menampilkan pilihan kelas, tanpa list materi panjang
+  const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [topicsByGrade, setTopicsByGrade] = useState<Record<string, string[]>>(DEFAULT_TOPICS_BY_GRADE);
 
@@ -64,7 +64,10 @@ export const WelcomeForm: React.FC = () => {
           return list.length > 0 ? list : DEFAULT_TOPICS_BY_GRADE[fallbackKey];
         };
         setTopicsByGrade({
-          'Kelas 10': [...mapGrade('10', 'Kelas 10'), ...extra.filter((b: string) => !mapGrade('10', 'Kelas 10').includes(b))],
+          'Kelas 10': [
+            ...mapGrade('10', 'Kelas 10'),
+            ...extra.filter((b: string) => !mapGrade('10', 'Kelas 10').includes(b)),
+          ],
           'Kelas 11': mapGrade('11', 'Kelas 11'),
           'Kelas 12': mapGrade('12', 'Kelas 12'),
         });
@@ -78,11 +81,17 @@ export const WelcomeForm: React.FC = () => {
 
   const currentSubjects = selectedGrade
     ? topicsByGrade[selectedGrade] || DEFAULT_TOPICS_BY_GRADE[selectedGrade] || []
-    : DEFAULT_TOPICS_BY_GRADE['Kelas 10'];
+    : [];
 
   const handleGradeSelect = (grade: string) => {
-    setSelectedGrade(grade);
-    setSelectedSubject(null);
+    if (selectedGrade === grade) {
+      // Toggle tutup jika kelas yang sama diklik kembali
+      setSelectedGrade(null);
+      setSelectedSubject(null);
+    } else {
+      setSelectedGrade(grade);
+      setSelectedSubject(null);
+    }
   };
 
   const handleStartConfigured = () => {
@@ -98,67 +107,112 @@ export const WelcomeForm: React.FC = () => {
   const isFormValid = selectedGrade !== null && selectedSubject !== null;
 
   return (
-    <div className={"flex-1 flex items-center justify-center p-4 md:p-8 overflow-y-auto w-full h-full relative z-10 bg-slate-50 dark:bg-slate-950 transition-colors duration-300"}>
-      <div className={"w-full max-w-2xl bg-white/50 dark:bg-slate-900/50 border border-white/40 dark:border-slate-700/50 rounded-3xl p-6 md:p-8 backdrop-blur-2xl shadow-2xl transition-colors duration-300"}>
-        <div className={"flex flex-col items-center text-center mb-6 select-none"}>
-          <div className={"flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-600/20 mb-4"}>
-            <Sparkles className={"text-white"} size={24} />
+    <div className="flex-1 overflow-y-auto w-full h-full relative z-10 bg-slate-100/60 dark:bg-slate-950 p-4 md:p-8 flex flex-col items-center">
+      {/* Floating Card Modal di Tengah Layar */}
+      <div className="w-full max-w-xl my-auto bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl transition-all duration-300">
+        {/* Logo AI & Judul Sambutan (Utuh tanpa terpotong) */}
+        <div className="flex flex-col items-center text-center mb-6 select-none">
+          <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-lg shadow-emerald-600/25 mb-3 text-white">
+            <Sparkles size={26} />
           </div>
-          <h1 className={"text-xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 mb-2"}>Selamat Datang di MathAI</h1>
-          <p className={"text-xs md:text-base text-slate-500 dark:text-slate-400 max-w-lg leading-relaxed"}>
-            Tutor virtual AI yang siap membantu belajarmu. Pilih kelas dan bab sesuai materi Kurikulum Merdeka &amp; m4th-lab.net, atau langsung mengobrol sekarang.
+          <h1 className="text-xl md:text-2xl font-extrabold text-slate-800 dark:text-slate-100 mb-1.5 tracking-tight">
+            Selamat Datang di MathAI
+          </h1>
+          <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
+            Tutor virtual AI untuk Matematika SMA. Silakan pilih kelas di bawah untuk melihat daftar materi pelajaran.
           </p>
         </div>
 
-        <div className={"space-y-6 mb-8"}>
-          {/* Grade Selector */}
-          <div className={"flex flex-col gap-3"}>
-            <span className={"text-xs font-semibold text-slate-500 uppercase tracking-wider select-none"}>1. Pilih Kelas SMA</span>
-            <div className={"grid grid-cols-3 gap-3"}>
-              {GRADES.map((grade) => (
-                <OptionCard
-                  key={grade}
-                  label={grade}
-                  selected={selectedGrade === grade}
-                  onClick={() => handleGradeSelect(grade)}
-                />
-              ))}
+        <div className="space-y-5 mb-6">
+          {/* Step 1: Pilihan Kelas */}
+          <div className="flex flex-col gap-2.5">
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider select-none">
+              Pilih Kelas SMA
+            </span>
+            <div className="grid grid-cols-3 gap-3">
+              {GRADES.map((grade) => {
+                const isSelected = selectedGrade === grade;
+                return (
+                  <button
+                    key={grade}
+                    type="button"
+                    onClick={() => handleGradeSelect(grade)}
+                    className={`flex flex-col items-center justify-center py-3 px-2 rounded-2xl border text-center transition-all duration-200 select-none cursor-pointer ${
+                      isSelected
+                        ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold shadow-sm ring-2 ring-emerald-500/20'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <span className="text-sm md:text-base font-bold">{grade}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                      Kurikulum Merdeka
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Subject Selector (Sinkron dengan Bab per Kelas) */}
-          <div className={"flex flex-col gap-3"}>
-            <span className={"text-xs font-semibold text-slate-500 uppercase tracking-wider select-none"}>
-              2. Pilih Bab / Topik Materi ({selectedGrade || 'Semua Kelas'})
-            </span>
-            <div className={"grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-64 overflow-y-auto pr-1"}>
-              {currentSubjects.map((subject) => (
-                <OptionCard
-                  key={subject}
-                  label={subject}
-                  selected={selectedSubject === subject}
-                  onClick={() => setSelectedSubject(subject)}
-                />
-              ))}
+          {/* Step 2: Muncul di bawahnya materi kelas saat kelas diklik */}
+          {selectedGrade && (
+            <div className="flex flex-col gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider select-none">
+                  Pilih Materi {selectedGrade}
+                </span>
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  {currentSubjects.length} Materi
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
+                {currentSubjects.map((subject) => {
+                  const isSubjectSelected = selectedSubject === subject;
+                  return (
+                    <button
+                      key={subject}
+                      type="button"
+                      onClick={() => setSelectedSubject(subject)}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left text-xs md:text-sm transition-all duration-150 select-none cursor-pointer ${
+                        isSubjectSelected
+                          ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold shadow-2xs'
+                          : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <BookOpen
+                        size={13}
+                        className={
+                          isSubjectSelected
+                            ? 'text-emerald-600 shrink-0'
+                            : 'text-slate-400 shrink-0'
+                        }
+                      />
+                      <span className="truncate">{subject}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        <div className={"flex flex-col sm:flex-row gap-3 items-center justify-center"}>
-          <Button
-            onClick={handleStartConfigured}
-            disabled={!isFormValid}
-            variant="primary"
-            className={"w-full sm:w-auto px-8 py-3 text-base"}
-          >
-            Mulai Belajar
-          </Button>
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-2.5 items-center justify-center pt-2 border-t border-slate-100 dark:border-slate-800">
+          {selectedGrade && (
+            <Button
+              onClick={handleStartConfigured}
+              disabled={!isFormValid}
+              variant="primary"
+              className="w-full sm:w-auto px-6 py-2.5 text-sm font-bold bg-emerald-600 hover:bg-emerald-700"
+            >
+              Mulai Belajar {selectedSubject ? `• ${selectedSubject}` : ''}
+            </Button>
+          )}
           <Button
             onClick={handleStartDirect}
             variant="flat"
-            className={"w-full sm:w-auto px-6 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 text-sm"}
+            className="w-full sm:w-auto px-4 py-2.5 text-xs md:text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
           >
-            Langsung Tanya AI
+            Langsung Tanya AI (Tanpa Materi)
           </Button>
         </div>
       </div>
