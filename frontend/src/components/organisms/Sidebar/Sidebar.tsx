@@ -32,7 +32,7 @@ const TOPICS_BY_GRADE: Record<string, string[]> = {
   'Kelas 11': [
     'Komposisi Fungsi dan Fungsi Invers',
     'Lingkaran',
-    'Statistika',
+    'Statistika: Analisis Data Bivariat',
     'Induksi Matematika',
     'Polinomial',
     'Matriks',

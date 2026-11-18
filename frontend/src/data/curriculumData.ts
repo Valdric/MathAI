@@ -1716,7 +1716,20 @@ export const CURRICULUM_DATA: Record<string, ICurriculumTopicDetail> = {
 // Helper function untuk mengambil data materi berdasarkan nama bab
 export const getTopicCurriculum = (subject: string, grade?: string): ICurriculumTopicDetail => {
   if (!subject) {
+    if (grade?.includes('11')) {
+      return CURRICULUM_DATA['Statistika: Analisis Data Bivariat'];
+    }
     return CURRICULUM_DATA['Statistika'];
+  }
+
+  // Jika jenjang kelas 11 dan memilih 'Statistika' umum, arahkan ke Analisis Data Bivariat
+  if (
+    grade?.includes('11') &&
+    subject.toLowerCase().includes('statistika') &&
+    !subject.toLowerCase().includes('tunggal') &&
+    !subject.toLowerCase().includes('kelompok')
+  ) {
+    return CURRICULUM_DATA['Statistika: Analisis Data Bivariat'];
   }
 
   // 1. Cek kecocokan langsung
