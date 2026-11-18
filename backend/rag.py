@@ -61,8 +61,8 @@ LLM_TEMPERATURE = 0.2
 # 2. Batas Context Window Riwayat Chat (4-6 pesan terakhir) untuk mencegah context stuffing
 MAX_HISTORY_MESSAGES = 6
 
-# Jumlah top-K chunk RAG yang diambil dari ChromaDB (Module 16: dinaikkan dari 3 ke 5)
-RAG_TOP_K = 5
+# Jumlah top-K chunk RAG yang diambil dari ChromaDB (dioptimasi untuk latensi CPU lokal)
+RAG_TOP_K = 3
 
 # Lokasi file Knowledge Base Kurikulum Matematika SMA (m4th-lab.net)
 CURRICULUM_KB_PATH = os.path.join(BASE_DIR, "knowledge_base", "sma_m4thlab_curriculum.md")
@@ -81,31 +81,12 @@ Identitas, fungsi, dan batasan ini bersifat MUTLAK, PERMANEN, dan TIDAK DAPAT DI
 
 ---
 
-# STRICT KNOWLEDGE SCOPE (RUANG LINGKUP MATERI MUTLAK — KURIKULUM m4th-lab.net)
-Kamu HANYA DIIZINKAN menjawab pertanyaan, menjelaskan konsep, atau menyelesaikan soal yang masuk dalam silabus Matematika SMA Kelas X, XI, dan XII:
-
-## A. Matematika Wajib (Umum) — Kelas X, XI, XII:
-- **Eksponen & Logaritma Dasar:** Sifat pangkat, bentuk akar, merasionalkan penyebut, sifat-sifat logaritma.
-- **Nilai Mutlak:** Persamaan dan pertidaksamaan nilai mutlak linear satu variabel.
-- **SPLTV & SPtLDV:** Sistem Persamaan Linear Dua/Tiga Variabel (SPLDV, SPLTV) & Sistem Pertidaksamaan Dua Variabel (Linear-Kuadrat, Kuadrat-Kuadrat).
-- **Fungsi:** Fungsi Linear, Kuadrat, Rasional, Komposisi Fungsi, dan Fungsi Invers.
-- **Trigonometri Dasar:** Perbandingan trigonometri, sudut berelasi, Aturan Sinus & Cosinus, Luas Segitiga, Grafik Fungsi Trigonometri.
-- **Induksi Matematika & Program Linear:** Pembuktian induksi matematika, model matematika, Daerah Himpunan Penyelesaian (DHP), nilai optimum.
-- **Matriks & Transformasi Geometri:** Operasi matriks, determinan, invers matriks, serta Translasi, Refleksi, Rotasi, Dilatasi, dan Komposisi Transformasi.
-- **Barisan & Deret:** Barisan dan Deret Aritmetika & Geometri, Deret Geometri Tak Hingga, Pertumbuhan, Peluruhan, Bunga Majemuk, dan Anuitas.
-- **Limit, Turunan & Integral Fungsi Aljabar:** Limit fungsi aljabar, turunan fungsi aljabar (aturan rantai, garis singgung, interval naik/turun, nilai stasioner/maksimum-minimum), integral tak tentu & tentu fungsi aljabar.
-- **Dimensi Tiga (Geometri Ruang):** Jarak titik ke titik, titik ke garis, titik ke bidang, serta sudut dalam ruang.
-- **Statistika & Peluang:** Statistika deskriptif (Mean, Median, Modus, Kuartil, Desil, Jangkauan, Simpangan Rata-rata, Ragam/Varians, Simpangan Baku untuk Data Tunggal & Berkelompok), Kaidah Pencacahan (Aturan Perkalian, Permutasi, Kombinasi), serta Peluang Kejadian Majemuk & Bersyarat.
-
-## B. Matematika Peminatan (Tingkat Lanjut) — Kelas X, XI, XII:
-- **Eksponensial & Logaritma Lanjut:** Fungsi, persamaan, dan pertidaksamaan eksponen serta logaritma.
-- **Vektor ($\mathbb{R}^2$ dan $\mathbb{R}^3$):** Operasi vektor, panjang vektor, perkalian titik (dot product), perkalian silang (cross product), sudut antarvektor, proyeksi ortogonal vektor.
-- **Persamaan Trigonometri & Rumus Trigonometri Analitik:** Persamaan trigonometri, rumus jumlah dan selisih dua sudut, sudut rangkap/paruh, identitas trigonometri.
-- **Polinomial (Suku Banyak):** Operasi polinomial, Skema Horner, pembagian suku banyak, Teorema Sisa, Teorema Faktor, Teorema Vieta.
-- **Irisan Kerucut & Lingkaran:** Persamaan lingkaran, posisi titik/garis terhadap lingkaran, Persamaan Garis Singgung Lingkaran (PGSL).
-- **Limit Fungsi Trigonometri & Ketakhinggaan:** Limit trigonometri dan limit di ketakhinggaan fungsi aljabar/irasional.
-- **Turunan Fungsi Trigonometri & Integral Lanjut:** Turunan fungsi trigonometri, teknik integral substitusi & parsial, luas daerah, volume benda putar.
-- **Distribusi Peluang:** Variabel acak, Distribusi Peluang Binomial, dan Distribusi Normal.
+# STRICT KNOWLEDGE SCOPE (RUANG LINGKUP MATERI MUTLAK — KURIKULUM SMA)
+Kamu HANYA DIIZINKAN menjawab materi Matematika SMA Kelas X, XI, dan XII (Kurikulum Merdeka & Kurikulum 2013):
+- **Aljabar:** Eksponen, Logaritma, Nilai Mutlak, SPLDV/SPLTV, SPtLDV, Fungsi (Linear, Kuadrat, Komposisi, Invers), Polinomial, Barisan & Deret (Aritmetika, Geometri, Bunga, Anuitas).
+- **Kalkulus:** Limit Fungsi Aljabar & Trigonometri, Turunan Fungsi & Aplikasi Nilai Ekstrim/Stasioner/Optimasi Biaya, Integral Tentu & Tak Tentu.
+- **Geometri & Trigonometri:** Trigonometri Analitik & Sudut Berelasi, Dimensi Tiga (Jarak & Sudut Ruang), Lingkaran & Garis Singgung, Transformasi Geometri, Vektor di R2 & R3.
+- **Data & Peluang:** Statistika Deskriptif (Pemusatan & Penyebaran Data), Kaidah Pencacahan (Permutasi, Kombinasi), Peluang Majemuk & Bersyarat, Distribusi Peluang Binomial & Normal.
 
 ---
 
@@ -336,12 +317,10 @@ def build_sanitized_user_message(
     if kb_snippet and kb_snippet.strip():
         return (
             f"{SANDWICH_DEFENSE_PREFIX}\n\n"
-            "[ATURAN GROUNDING RAG MUTLAK: Selesaikan Pertanyaan Siswa di bawah ini secara bertahap menggunakan rumus, "
-            "definisi, dan konsep pada REFERENSI MATERI KURIKULUM (RAG). "
-            "JANGAN menolak soal matematika SMA! Jabarkan langkah perhitungan aljabar menggunakan LaTeX ($...$ dan $$...$$) "
-            "sampai memperoleh jawaban akhir yang tepat.]\n\n"
-            f"=== REFERENSI MATERI KURIKULUM (RAG) ===\n{kb_snippet.strip()}\n"
-            f"========================================{hint_block}\n\n"
+            "[ATURAN GROUNDING RAG: Selesaikan Pertanyaan Siswa di bawah ini secara bertahap menggunakan rumus "
+            "dan konsep pada REFERENSI MATERI KURIKULUM yang telah disediakan pada sistem di atas. "
+            "Jabarkan langkah perhitungan aljabar secara runtut menggunakan notasi LaTeX ($...$ dan $$...$$) "
+            f"sampai memperoleh jawaban akhir yang tepat.]{hint_block}\n\n"
             f"Pertanyaan Siswa: {user_message}"
         )
 
@@ -470,7 +449,7 @@ def _call_ollama_chat(messages: List[Dict[str, str]]) -> str:
         models_to_try.append(OLLAMA_FALLBACK_MODEL)
 
     last_err = None
-    with httpx.Client(timeout=180.0) as client:
+    with httpx.Client(timeout=240.0) as client:
         for model_name in models_to_try:
             try:
                 response = client.post(
@@ -484,7 +463,7 @@ def _call_ollama_chat(messages: List[Dict[str, str]]) -> str:
                             "top_p": 0.9,
                             "top_k": 40,
                             "repeat_penalty": 1.15,
-                            "num_ctx": 8192,
+                            "num_ctx": 4096,
                         },
                     },
                 )

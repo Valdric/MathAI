@@ -148,21 +148,43 @@ def get_embedding_function(name: Optional[str] = None):
 def get_knowledge_collection(client=None, name: Optional[str] = None, embedding_function=None):
     client = client or get_chroma_client()
     ef = embedding_function if embedding_function is not None else _DEFAULT_EMBEDDING_FN
+    coll_name = name or KNOWLEDGE_COLLECTION_NAME
     kwargs: Dict[str, Any] = {
-        "name": name or KNOWLEDGE_COLLECTION_NAME,
+        "name": coll_name,
         "metadata": {"description": "MathAI SMA Curriculum Knowledge Base (Kemendikbud & m4th-lab.net)"},
         "embedding_function": ef,
     }
-    return client.get_or_create_collection(**kwargs)
+    try:
+        return client.get_or_create_collection(**kwargs)
+    except ValueError as exc:
+        if "embedding function conflict" in str(exc).lower():
+            return client.get_collection(name=coll_name)
+        raise
 
 
 def get_upload_collection(client=None):
     client = client or get_chroma_client()
-    return client.get_or_create_collection(
-        name=UPLOAD_COLLECTION_NAME,
-        metadata={"description": "Dokumen unggahan siswa (dibatasi per pengguna lewat metadata uploaded_by)"},
-        embedding_function=_DEFAULT_EMBEDDING_FN,
-    )
+    try:
+        return client.get_or_create_collection(
+            name=UPLOAD_COLLECTION_NAME,
+            metadata={"description": "Dokumen unggahan siswa (dibatasi per pengguna lewat metadata uploaded_by)"},
+            embedding_function=_DEFAULT_EMBEDDING_FN,
+        )
+    except ValueError as exc:
+        if "embedding function conflict" in str(exc).lower():
+            try:
+                coll = client.get_collection(UPLOAD_COLLECTION_NAME)
+                if coll.count() == 0:
+                    client.delete_collection(UPLOAD_COLLECTION_NAME)
+                    return client.create_collection(
+                        name=UPLOAD_COLLECTION_NAME,
+                        metadata={"description": "Dokumen unggahan siswa (dibatasi per pengguna lewat metadata uploaded_by)"},
+                        embedding_function=_DEFAULT_EMBEDDING_FN,
+                    )
+            except Exception:
+                pass
+            return client.get_collection(UPLOAD_COLLECTION_NAME)
+        raise
 
 
 # ------------------------------------------------------------------------------
