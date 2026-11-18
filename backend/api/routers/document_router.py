@@ -101,11 +101,30 @@ def list_documents(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=503, detail=str(exc))
 
 
+from api.routers.knowledge_router import get_optional_user
+
 @router.delete("/api/documents/{filename}")
-def delete_document(filename: str, current_user: User = Depends(get_current_user)):
-    """Menghapus satu dokumen unggahan (beserta seluruh chunk-nya di ChromaDB) milik pengguna."""
+def delete_document(
+    filename: str,
+    current_user: Optional[User] = Depends(get_optional_user),
+):
+    """Menghapus satu dokumen unggahan milik pengguna, atau materi knowledge base jika tanpa user."""
+    deleted = 0
     try:
-        deleted = delete_user_document(current_user.id, filename)
+        if current_user is not None:
+            deleted = delete_user_document(current_user.id, filename)
+        if deleted == 0:
+            from rag_store import get_chroma_client, KNOWLEDGE_COLLECTION_NAME
+            client = get_chroma_client()
+            try:
+                col = client.get_collection(KNOWLEDGE_COLLECTION_NAME)
+                res = col.get(where={"$or": [{"source_file": filename}, {"source": filename}]})
+                ids = res.get("ids", [])
+                if ids:
+                    col.delete(ids=ids)
+                    deleted = len(ids)
+            except Exception:
+                pass
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     if deleted == 0:

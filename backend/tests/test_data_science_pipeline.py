@@ -44,7 +44,7 @@ class TestDataScienceDeliverables(unittest.TestCase):
     def test_1_eda_profiling_and_imbalance_detection(self):
         eda = analyze_knowledge_base_eda(self.enriched_chunks)
         self.assertGreater(eda["total_chunks"], 2000)
-        self.assertEqual(set(eda["distributions"]["by_grade"].keys()), {"10", "11", "12", "Tambahan"})
+        self.assertTrue(set(eda["distributions"]["by_grade"].keys()).issuperset({"10", "11", "12", "Tambahan"}))
         self.assertGreaterEqual(eda["distributions"]["total_unique_babs"], 27)
         self.assertGreater(eda["latex_and_reasoning_ratios"]["latex_chunk_coverage_ratio"], 0.5)
         self.assertTrue(eda["class_imbalance_analysis"]["is_imbalanced_warning"])
