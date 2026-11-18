@@ -219,8 +219,33 @@ def retrieve_relevant_curriculum_context(
         n_results=n_results,
         user_id=user_id,
     )
+    norm_grade = normalize_grade(grade)
+    if norm_grade:
+        global_hits = query_knowledge_chromadb(
+            query=query,
+            grade=None,
+            n_results=n_results,
+            user_id=user_id,
+        )
+        merged_by_id: Dict[str, Dict[str, Any]] = {}
+        for h in hits + global_hits:
+            cid = h["id"]
+            if cid not in merged_by_id or h["distance"] < merged_by_id[cid]["distance"]:
+                merged_by_id[cid] = h
+
+        def _effective_rank_key(item: Dict[str, Any]) -> float:
+            meta = item.get("metadata") or {}
+            is_same_grade = meta.get("kelas") == norm_grade or meta.get("origin") == "upload"
+            return item["distance"] - (0.035 if is_same_grade else 0.0)
+
+        hits = sorted(merged_by_id.values(), key=_effective_rank_key)[:n_results]
+
     if max_distance is not None:
         hits = [h for h in hits if h["distance"] <= max_distance]
+    elif len(hits) > 1:
+        best_dist = hits[0]["distance"]
+        cutoff = max(0.55, best_dist * 1.85)
+        hits = [hits[0]] + [h for h in hits[1:] if h["distance"] <= cutoff]
 
     if hits:
         parts = []
@@ -338,6 +363,7 @@ def build_sanitized_user_message(
             f"{SANDWICH_DEFENSE_PREFIX}\n\n"
             "[ATURAN GROUNDING RAG MUTLAK: Selesaikan Pertanyaan Siswa di bawah ini secara bertahap menggunakan rumus, "
             "definisi, dan konsep pada REFERENSI MATERI KURIKULUM (RAG). "
+            "Gunakan angka dari Pertanyaan Siswa (JANGAN menyalin angka dari contoh soal di referensi untuk menggantikan soal siswa). "
             "JANGAN menolak soal matematika SMA! Jabarkan langkah perhitungan aljabar menggunakan LaTeX ($...$ dan $$...$$) "
             "sampai memperoleh jawaban akhir yang tepat.]\n\n"
             f"=== REFERENSI MATERI KURIKULUM (RAG) ===\n{kb_snippet.strip()}\n"

@@ -843,6 +843,18 @@ class TestUploadAPI(ChromaTestCase):
         self.assertEqual(stats["index_state"], "ready")
         self.assertGreater(stats["curriculum_chunks"], 0)
 
+    def test_cross_grade_curriculum_context_and_synonym_expansion(self):
+        # Saat UI di Kelas 10 tetapi siswa bertanya materi Kelas 12 (Integral), konteks tetap menemukan bab Integral
+        ctx = rag.retrieve_relevant_curriculum_context(
+            "menghitung luas daerah dengan integral tentu", grade="Kelas 10", user_id=7
+        )
+        self.assertIn("> **Sumber:** Integral (Kelas 12", ctx)
+        # Ekspansi sinonim istilah matematika Bahasa Indonesia
+        terms = rag_store._extract_query_terms("jelaskan rumus rata-rata dan ragam pada suku banyak")
+        self.assertIn("mean", terms)
+        self.assertIn("varian", terms)
+        self.assertIn("polinomial", terms)
+
 
 if __name__ == "__main__":
     unittest.main()

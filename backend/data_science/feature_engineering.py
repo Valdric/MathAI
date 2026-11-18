@@ -368,6 +368,44 @@ def analyze_math_problem_hint(text: str) -> Dict[str, str]:
                 f"- Matriks ordo $2 \\times 2$: $\\det(A) = ad - bc = ({ma})({md}) - ({mb})({mc}) = {ma * md} - ({mb * mc}) = {det}$."
             )
 
+    # 5. Deteksi Statistika Data Tunggal (mean/rata-rata, median, modus, jangkauan, ragam/varians, simpangan baku)
+    stat_keywords = ("rata-rata", "rerata", "mean", "median", "modus", "kuartil", "jangkauan", "varian", "ragam", "simpangan baku")
+    if any(k in lower for k in stat_keywords):
+        if any(k in lower for k in ("rata-rata", "rerata", "mean")):
+            expansions.append("Statistika Ukuran Pemusatan Mean Rerata atau Rata-rata")
+        if any(k in lower for k in ("median", "modus", "jangkauan")):
+            expansions.append("Statistika Ukuran Pemusatan Modus Median dan Jangkauan")
+        if "kuartil" in lower:
+            expansions.append("Statistika Ukuran Penempatan Kuartil Data Tunggal Kuartil Data Kelompok")
+        if any(k in lower for k in ("varian", "ragam", "simpangan baku")):
+            expansions.append("Statistika Ukuran Penyebaran Varian dan Simpangan Baku")
+
+        stat_seq = re.search(r"(?<![A-Za-z0-9_])(-?\d+(?:\s*,\s*-?\d+){2,})", clean)
+        if stat_seq and "barisan" not in lower and "deret" not in lower:
+            nums = [int(n.strip()) for n in stat_seq.group(1).split(",")]
+            if len(nums) >= 3:
+                n_cnt = len(nums)
+                s_nums = sorted(nums)
+                total_sum = sum(nums)
+                mean_val = total_sum // n_cnt if total_sum % n_cnt == 0 else round(total_sum / n_cnt, 4)
+                if n_cnt % 2 == 1:
+                    med_val = s_nums[n_cnt // 2]
+                else:
+                    m_sum = s_nums[n_cnt // 2 - 1] + s_nums[n_cnt // 2]
+                    med_val = m_sum // 2 if m_sum % 2 == 0 else m_sum / 2
+                counts = {x: nums.count(x) for x in set(nums)}
+                max_freq = max(counts.values())
+                modes = sorted(k for k, v in counts.items() if v == max_freq)
+                mode_str = ", ".join(str(m) for m in modes) if max_freq > 1 else "Tidak ada (semua muncul 1 kali)"
+                rng_val = s_nums[-1] - s_nums[0]
+                var_pop = round(sum((x - (total_sum / n_cnt)) ** 2 for x in nums) / n_cnt, 4)
+                hints.append(
+                    f"- Data tunggal ($n = {n_cnt}$), diurutkan dari terkecil ke terbesar: ${', '.join(str(x) for x in s_nums)}$.\n"
+                    f"- Jumlah seluruh data: $\\sum x_i = {total_sum}$.\n"
+                    f"- Rata-rata (Mean): $$\\bar{{x}} = \\frac{{\\sum x_i}}{{n}} = \\frac{{{total_sum}}}{{{n_cnt}}} = {mean_val}$$\n"
+                    f"- Nilai tengah (Median): ${med_val}$, Modus: ${mode_str}$ (frekuensi ${max_freq}$), Jangkauan: ${s_nums[-1]} - {s_nums[0]} = {rng_val}$, Ragam populasi ($\\sigma^2$): ${var_pop}$."
+                )
+
     return {
         "query_expansion": " ".join(expansions),
         "verification_hint": "\n".join(hints),

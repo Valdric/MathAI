@@ -201,6 +201,13 @@ class TestDataScienceDeliverables(unittest.TestCase):
         h4 = analyze_math_problem_hint("Soal matriks ordo 2x2: A = [[1, 2], [3, 4]]")
         self.assertIn("-2", h4["verification_hint"])
 
+        # 5. Statistika data tunggal (rata-rata, median, modus)
+        h5 = analyze_math_problem_hint("Tentukan rata-rata, median, dan modus dari data: 4, 6, 8, 6, 10, 8, 6")
+        self.assertIn("Statistika", h5["query_expansion"])
+        self.assertIn("48", h5["verification_hint"])
+        self.assertIn("Median): $6$", h5["verification_hint"])
+        self.assertIn("Modus: $6$", h5["verification_hint"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
