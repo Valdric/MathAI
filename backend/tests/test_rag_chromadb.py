@@ -67,6 +67,56 @@ class TestMathAIRAG(unittest.TestCase):
         self.assertIn("Referensi RAG #1", ctx)
         self.assertIn("bab_06_matriks.md", ctx)
 
+    def test_module13_to_16_app_package_and_chat_stream(self):
+        """Module 13–16: Verifikasi paket app/ (ensure_index idempotent, ingest_documents tanpa duplikat, /chat/stream)."""
+        import shutil
+        import tempfile
+        from fastapi.testclient import TestClient
+
+        repo_root = os.path.dirname(BASE_DIR)
+        if repo_root not in sys.path:
+            sys.path.insert(0, repo_root)
+
+        from app.vector_store import VectorStore as AppVectorStore
+        from app.ingest import ingest_documents
+        from app.main import app, RAG_TOP_K
+
+        self.assertEqual(RAG_TOP_K, 5)
+
+        tmp_chroma = tempfile.mkdtemp(prefix="mathai_m13_")
+        tmp_kb = tempfile.mkdtemp(prefix="mathai_kb_")
+        try:
+            vs = AppVectorStore(chroma_path=tmp_chroma, collection_name="mathai-m13", auto_index=False)
+            vs.ensure_index("mathai-m13")
+            vs.ensure_index("mathai-m13")
+
+            doc_text = "Barisan aritmetika memiliki selisih dua suku berurutan tetap Un = a + (n-1)b"
+            emb = embed_text(doc_text)
+            vs.index_document("mathai-m13", "doc-1", doc_text, emb, {"source": "manual-test"})
+            hits = vs.search("mathai-m13", embed_text("rumus suku ke-n deret aritmatika"), k=3)
+            self.assertGreaterEqual(len(hits), 1)
+            self.assertIn("aritmetika", hits[0]["_source"]["text"].lower())
+
+            with open(os.path.join(tmp_kb, "eksponen.md"), "w", encoding="utf-8") as f:
+                f.write("# Eksponen\nSifat pangkat a^m * a^n = a^(m+n)")
+            with open(os.path.join(tmp_kb, "matriks.md"), "w", encoding="utf-8") as f:
+                f.write("# Matriks\nDeterminan matriks 2x2 adalah ad - bc")
+
+            c1 = ingest_documents(tmp_kb, vs, "mathai-kb-m14")
+            cnt1 = vs.count("mathai-kb-m14")
+            c2 = ingest_documents(tmp_kb, vs, "mathai-kb-m14")
+            cnt2 = vs.count("mathai-kb-m14")
+            self.assertEqual((c1, c2, cnt1, cnt2), (2, 2, 2, 2))
+
+            client = TestClient(app)
+            r_empty = client.post("/chat/stream", json={"messages": []})
+            self.assertEqual(r_empty.status_code, 400)
+            r_role = client.post("/chat/stream", json={"messages": [{"role": "assistant", "content": "halo"}]})
+            self.assertEqual(r_role.status_code, 400)
+        finally:
+            shutil.rmtree(tmp_chroma, ignore_errors=True)
+            shutil.rmtree(tmp_kb, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

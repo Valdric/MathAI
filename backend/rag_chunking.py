@@ -369,7 +369,14 @@ def chunk_markdown_with_metadata(
         return []
 
     splitter = MarkdownHeaderTextSplitter(
-        headers_to_split_on=[("#", "h1"), ("##", "section"), ("###", "sub_section"), ("####", "topic")],
+        headers_to_split_on=[
+            ("#", "h1"),
+            ("##", "section"),
+            ("###", "sub_section"),
+            ("####", "topic"),
+            ("#####", "sub_topic"),
+            ("######", "item_heading"),
+        ],
         strip_headers=False,
     )
     md_docs = splitter.split_text(cleaned_body) or [Document(page_content=cleaned_body, metadata={})]
@@ -392,6 +399,8 @@ def chunk_markdown_with_metadata(
         section = _clean_heading(doc.metadata.get("section", ""))
         sub_sec = _clean_heading(doc.metadata.get("sub_section", ""))
         topic = _clean_heading(doc.metadata.get("topic", ""))
+        sub_topic = _clean_heading(doc.metadata.get("sub_topic", ""))
+        item_heading = _clean_heading(doc.metadata.get("item_heading", ""))
 
         kelas = detect_grade(sub_sec, topic, section, h1, source_name, fallback=raw_kelas)
 
@@ -402,7 +411,7 @@ def chunk_markdown_with_metadata(
         if isinstance(explicit_advanced, bool):
             is_advanced = explicit_advanced
         else:
-            context = f"{source_name} {h1} {section} {sub_sec} {topic}".lower()
+            context = f"{source_name} {h1} {section} {sub_sec} {topic} {sub_topic} {item_heading}".lower()
             is_advanced = (
                 "tingkat lanjut" in raw_mapel.lower()
                 or "peminatan" in raw_mapel.lower()
@@ -412,7 +421,7 @@ def chunk_markdown_with_metadata(
                 or "peminatan" in context
             )
 
-        heading_path = " › ".join(p for p in (bab_name, section, sub_sec, topic) if p)
+        heading_path = " › ".join(p for p in (bab_name, section, sub_sec, topic, sub_topic, item_heading) if p)
         mapel = raw_mapel or ("Matematika Tingkat Lanjut" if is_advanced else "Matematika Umum")
 
         for part in split_text_preserving_math(doc.page_content, chunk_size, chunk_overlap):
@@ -425,9 +434,10 @@ def chunk_markdown_with_metadata(
                 "metadata": {
                     "kelas": kelas,
                     "bab": bab_name,
+                    "judul": bab_name,
                     "section": section,
                     "sub_section": sub_sec,
-                    "topic": topic,
+                    "topic": topic or sub_topic or item_heading,
                     "heading_path": heading_path,
                     "fase": raw_fase or "-",
                     "mapel": mapel,
@@ -435,6 +445,7 @@ def chunk_markdown_with_metadata(
                     "kurikulum": raw_kurikulum,
                     "sumber": raw_sumber,
                     "source_file": source_name,
+                    "source": source_name,
                     "chunk_index": counter,
                     "char_count": len(text),
                 },

@@ -11,8 +11,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 import sys
 
-# Tambahkan path root backend agar import module bekerja
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Tambahkan path root backend & root repo agar import module bekerja
+BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(BACKEND_ROOT)
+for _p in (BACKEND_ROOT, REPO_ROOT):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from api.routers import auth_router, user_router, chat_router, document_router, knowledge_router
 from core.database import engine, Base, SessionLocal
@@ -84,3 +88,7 @@ app.include_router(knowledge_router.router)
 @app.get("/")
 def home():
     return "Backend MathAI berjalan!"
+
+
+# Registrasi endpoint POST /chat/stream (Module 16)
+import app.main as _stream_module  # noqa: E402, F401

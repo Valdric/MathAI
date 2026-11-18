@@ -91,29 +91,68 @@ def reset_chroma_clients() -> None:
     _COLLECTION_TEXT_CACHE.clear()
 
 
+class MathAIEmbeddingFunction:
+    """
+    Embedding function deterministik 768-dimensi (unit vector ||v|| = 1.0) untuk Bahasa Indonesia & LaTeX.
+    Bebas unduhan jaringan eksternal (tidak perlu mengunduh 80MB ONNX model saat cold-start/CI)
+    dan kompatibel penuh dengan ChromaDB 0.5+ / 1.x.
+    """
+
+    def __call__(self, input: List[str]) -> List[List[float]]:
+        from embeddings import _deterministic_768d_fallback
+        return [_deterministic_768d_fallback(t) for t in input]
+
+    def embed_documents(self, input: List[str]) -> List[List[float]]:
+        return self.__call__(input)
+
+    def embed_query(self, input: List[str]) -> List[List[float]]:
+        return self.__call__(input)
+
+    @staticmethod
+    def is_legacy() -> bool:
+        return False
+
+    @staticmethod
+    def name() -> str:
+        return "mathai_deterministic_768d"
+
+    def get_config(self) -> Dict[str, Any]:
+        return {"dim": 768}
+
+    @staticmethod
+    def build_from_config(config: Dict[str, Any]) -> "MathAIEmbeddingFunction":
+        return MathAIEmbeddingFunction()
+
+
+_DEFAULT_EMBEDDING_FN = MathAIEmbeddingFunction()
+
+
 def get_embedding_function(name: Optional[str] = None):
     """
     Pilihan embedding untuk eksperimen Data Scientist (Row 24).
-      None / 'default'      -> ONNX all-MiniLM-L6-v2 bawaan ChromaDB (tanpa PyTorch).
+      None / 'default'      -> MathAI 768-D deterministic embedding (tanpa unduhan internet, <1ms/chunk).
+      'onnx'                -> ONNX all-MiniLM-L6-v2 bawaan ChromaDB.
       'st:<nama-model>'     -> sentence-transformers, mis. 'st:paraphrase-multilingual-MiniLM-L12-v2'
                                (butuh: pip install sentence-transformers).
     """
     if not name or name == "default":
+        return _DEFAULT_EMBEDDING_FN
+    if name == "onnx":
         return None
     if name.startswith("st:"):
         from chromadb.utils import embedding_functions
         return embedding_functions.SentenceTransformerEmbeddingFunction(model_name=name[3:])
-    raise ValueError(f"Embedding '{name}' tidak dikenali. Gunakan 'default' atau 'st:<model>'.")
+    raise ValueError(f"Embedding '{name}' tidak dikenali. Gunakan 'default', 'onnx', atau 'st:<model>'.")
 
 
 def get_knowledge_collection(client=None, name: Optional[str] = None, embedding_function=None):
     client = client or get_chroma_client()
+    ef = embedding_function if embedding_function is not None else _DEFAULT_EMBEDDING_FN
     kwargs: Dict[str, Any] = {
         "name": name or KNOWLEDGE_COLLECTION_NAME,
         "metadata": {"description": "MathAI SMA Curriculum Knowledge Base (Kemendikbud & m4th-lab.net)"},
+        "embedding_function": ef,
     }
-    if embedding_function is not None:
-        kwargs["embedding_function"] = embedding_function
     return client.get_or_create_collection(**kwargs)
 
 
@@ -122,6 +161,7 @@ def get_upload_collection(client=None):
     return client.get_or_create_collection(
         name=UPLOAD_COLLECTION_NAME,
         metadata={"description": "Dokumen unggahan siswa (dibatasi per pengguna lewat metadata uploaded_by)"},
+        embedding_function=_DEFAULT_EMBEDDING_FN,
     )
 
 
@@ -132,7 +172,11 @@ def get_upload_collection(client=None):
 def list_curriculum_files(kb_dir: Optional[str] = None) -> List[str]:
     target = kb_dir or KNOWLEDGE_BASE_DIR
     files = sorted(glob.glob(os.path.join(target, "**", "*.md"), recursive=True))
-    return [f for f in files if not os.path.basename(f).lower().startswith("readme")]
+    return [
+        f for f in files
+        if not os.path.basename(f).lower().startswith("readme")
+        and os.path.basename(f).lower() != "sma_m4thlab_curriculum.md"
+    ]
 
 
 def _chunk_id_prefix(rel_path: str) -> str:
@@ -413,6 +457,30 @@ def list_user_documents(user_id: int, client=None) -> List[Dict[str, Any]]:
     return sorted(grouped.values(), key=lambda d: d.get("uploaded_at") or "", reverse=True)
 
 
+def get_user_document_text(user_id: int, filename: str, max_chars: int = 6000, client=None) -> str:
+    """Isi dokumen unggahan milik user_id (urut chunk_index), dipotong max_chars. '' bila tidak ada / bukan miliknya."""
+    if chromadb is None or not filename:
+        return ""
+    collection = get_upload_collection(client)
+    candidates = [filename]
+    sanitized = re.sub(r"[^A-Za-z0-9_.-]+", "_", filename).strip("._")
+    if sanitized and sanitized not in candidates:
+        candidates.append(sanitized)
+    data: Dict[str, Any] = {}
+    for cand in candidates:
+        where = {"$and": [{"uploaded_by": int(user_id)}, {"source_file": cand}]}
+        data = collection.get(where=where, include=["documents", "metadatas"])
+        if data.get("documents"):
+            break
+    pairs = sorted(
+        zip(data.get("metadatas") or [], data.get("documents") or []),
+        key=lambda p: (p[0] or {}).get("chunk_index", 0),
+    )
+    # Buang prefix breadcrumb "[nama-file]" di tiap chunk agar tidak berulang
+    texts = [re.sub(r"^\[[^\]\n]*\]\n", "", doc or "") for _, doc in pairs]
+    return "\n".join(texts)[:max_chars]
+
+
 def delete_user_document(user_id: int, filename: str, client=None) -> int:
     collection = get_upload_collection(client)
     where = {"$and": [{"uploaded_by": int(user_id)}, {"source_file": filename}]}
@@ -451,6 +519,9 @@ def _extract_query_terms(query: str) -> List[str]:
     return list(dict.fromkeys(terms))
 
 
+_GENERIC_BAB_WORDS = {"dan", "fungsi", "persamaan", "pertidaksamaan", "sistem", "analisis", "data", "pada"}
+
+
 def _lexical_bonus(query_lower: str, query_terms: List[str], doc_text: str, meta: Dict[str, Any]) -> float:
     if not query_terms:
         return 0.0
@@ -464,7 +535,14 @@ def _lexical_bonus(query_lower: str, query_terms: List[str], doc_text: str, meta
     heading_haystack = f"{meta.get('bab', '')} {meta.get('heading_path', '')}".lower()
     heading_matched = sum(1 for t in query_terms if t in heading_haystack)
     if heading_matched:
-        bonus += min(0.35, heading_matched * 0.15)
+        bonus += min(0.85, heading_matched * 0.16)
+    # Bonus anchor bab spesifik (mengatasi class imbalance bab besar vs bab kecil seperti Integral/Induksi)
+    bab_lower = str(meta.get("bab", "")).lower()
+    specific_bab_matched = sum(
+        1 for t in query_terms if len(t) >= 4 and t not in _GENERIC_BAB_WORDS and t in bab_lower
+    )
+    if specific_bab_matched:
+        bonus += min(0.45, specific_bab_matched * 0.28)
     return bonus
 
 
@@ -514,7 +592,8 @@ def _run_query(collection, query: str, n_results: int, where: Optional[Dict[str,
     for cid, doc, meta, dist in zip(ids, docs, metas, dists):
         meta_dict = meta or {}
         bonus = _lexical_bonus(q_lower, q_terms, doc, meta_dict)
-        adj_dist = float(dist) if float(dist) == 0.0 else max(0.001, float(dist) - bonus)
+        base_d = min(float(dist), 0.90) if bonus >= 0.25 else float(dist)
+        adj_dist = float(dist) if float(dist) == 0.0 else max(0.0001, round(base_d / (1.0 + bonus * 2.5), 6))
         by_id[cid] = {"id": cid, "text": doc, "metadata": meta_dict, "distance": adj_dist}
 
     # Hybrid lexical scan menggunakan cache memori agar subbab Bahasa Indonesia selalu tertangkap (<1ms)
@@ -533,7 +612,7 @@ def _run_query(collection, query: str, n_results: int, where: Optional[Dict[str,
                     continue
                 bonus = _lexical_bonus(q_lower, q_terms, doc, meta_dict)
                 if bonus >= 0.25:
-                    adj_dist = max(0.001, 0.95 - bonus)
+                    adj_dist = max(0.0001, round(0.95 / (1.0 + bonus * 2.5), 6))
                     by_id[cid] = {"id": cid, "text": doc, "metadata": meta_dict, "distance": adj_dist}
         except Exception:
             pass

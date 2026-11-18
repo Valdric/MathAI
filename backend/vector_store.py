@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 from embeddings import embed_text, embed_texts, DEFAULT_OLLAMA_BASE_URL, DEFAULT_EMBED_MODEL
 from ingest import extract_text, split_markdown_into_chunks, discover_knowledge_base_files
+from rag_store import get_chroma_client
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
@@ -33,39 +34,96 @@ class VectorStore:
         collection_name: str = COLLECTION_NAME,
         ollama_base_url: str = DEFAULT_OLLAMA_BASE_URL,
         embed_model: str = DEFAULT_EMBED_MODEL,
+        auto_index: bool = True,
+        base_url: Optional[str] = None,
+        dimension: int = 768,
     ):
+        if base_url and os.path.isdir(base_url):
+            chroma_path = base_url
+        self.base_url = base_url or chroma_path
+        self.dimension = dimension
         self.chroma_path = os.path.abspath(chroma_path)
         self.collection_name = collection_name
         self.ollama_base_url = ollama_base_url
         self.embed_model = embed_model
 
         os.makedirs(self.chroma_path, exist_ok=True)
-        self.client = chromadb.PersistentClient(path=self.chroma_path)
-        self.collection = self.ensure_collection()
+        self.client = get_chroma_client(self.chroma_path)
+        self.collection = self.ensure_index(self.collection_name)
+        if (
+            auto_index
+            and self.chroma_path == os.path.abspath(DEFAULT_CHROMA_PATH)
+            and self.collection_name == COLLECTION_NAME
+            and self.collection.count() == 0
+            and os.path.isdir(DEFAULT_KB_PATH)
+        ):
+            self.index_knowledge_base(kb_root=DEFAULT_KB_PATH)
 
-    def ensure_collection(self):
-        """Membuat atau mengambil collection ChromaDB dengan metrik cosine similarity."""
-        return self.client.get_or_create_collection(
-            name=self.collection_name,
+    def ensure_index(self, index_name: Optional[str] = None):
+        """[Module 13] Membuat atau mengambil collection ChromaDB dengan metrik cosine similarity (idempotent)."""
+        target_name = index_name or self.collection_name
+        coll = self.client.get_or_create_collection(
+            name=target_name,
             metadata={"hnsw:space": "cosine"},
         )
+        if index_name is None or index_name == self.collection_name:
+            self.collection = coll
+        return coll
 
-    def count(self) -> int:
+    def ensure_collection(self):
+        """Alias ke ensure_index() untuk kompatibilitas mundur."""
+        return self.ensure_index(self.collection_name)
+
+    def count(self, index_name: Optional[str] = None) -> int:
         """Mengembalikan jumlah chunk dokumen yang tersimpan di ChromaDB."""
-        return self.collection.count()
+        coll = self.ensure_index(index_name) if index_name else self.collection
+        return coll.count()
 
-    def index_document(
-        self,
-        doc_id: str,
-        text: str,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        """Meng-embed satu dokumen/chunk (768 dimensi) dan menyimpannya ke ChromaDB."""
-        vec = embed_text(text, base_url=self.ollama_base_url, model=self.embed_model)
-        meta = dict(metadata or {"source": "manual"})
+    def index_document(self, *args, **kwargs) -> None:
+        """
+        [Module 13 & 14] Menyimpan satu dokumen/chunk ke ChromaDB secara idempotent (upsert/overwrite doc_id).
+        Mendukung dua tanda tangan pemanggilan:
+          1. index_document(index_name, doc_id, text, embedding, metadata=None)  [Panduan PDS Module 13/14]
+          2. index_document(doc_id, text, metadata=None, embedding=None)         [MathAI Default]
+        """
+        index_name: Optional[str] = kwargs.get("index_name")
+        doc_id: Optional[str] = kwargs.get("doc_id")
+        text: Optional[str] = kwargs.get("text")
+        embedding: Optional[List[float]] = kwargs.get("embedding")
+        metadata: Optional[Dict[str, Any]] = kwargs.get("metadata")
+
+        if len(args) >= 4 and isinstance(args[3], (list, tuple)):
+            index_name = args[0]
+            doc_id = args[1]
+            text = args[2]
+            embedding = list(args[3])
+            if len(args) >= 5:
+                metadata = args[4]
+        elif len(args) == 1 and doc_id is not None:
+            index_name = args[0]
+        elif len(args) >= 2:
+            if doc_id is not None:
+                index_name = args[0]
+            else:
+                doc_id = args[0]
+                text = args[1]
+                if len(args) >= 3 and isinstance(args[2], dict):
+                    metadata = args[2]
+                elif len(args) >= 3 and isinstance(args[2], (list, tuple)):
+                    embedding = list(args[2])
+                    if len(args) >= 4 and isinstance(args[3], dict):
+                        metadata = args[3]
+
+        if not doc_id or text is None:
+            raise ValueError("doc_id dan text wajib diisi pada index_document()")
+
+        coll = self.ensure_index(index_name) if index_name else self.collection
+        vec = embedding or embed_text(text, base_url=self.ollama_base_url, model=self.embed_model)
+        meta = dict(metadata or {"source": str(doc_id)})
+        meta.setdefault("source", str(doc_id))
         meta.setdefault("uploaded_by", "system")
-        self.collection.upsert(
-            ids=[doc_id],
+        coll.upsert(
+            ids=[str(doc_id)],
             documents=[text],
             embeddings=[vec],
             metadatas=[meta],
@@ -138,7 +196,7 @@ class VectorStore:
             )
             all_chunks.extend(file_chunks)
 
-        indexed_count = self.index_chunks(all_chunks, batch_size=32, uploaded_by="system")
+        indexed_count = self.index_chunks(all_chunks, batch_size=256, uploaded_by="system")
         return {
             "status": "indexed",
             "files_processed": len(files),
@@ -148,21 +206,41 @@ class VectorStore:
 
     def search(
         self,
-        query: str,
-        k: int = 4,
+        query_or_index: Any,
+        query_embedding_or_k: Any = 5,
+        k: int = 5,
         kelas: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Mencari potongan materi paling relevan secara semantik menggunakan
-        vektor embedding query (768 dimensi) di ChromaDB dengan filter user scoping
-        serta reranking kata kunci matematika.
+        [Module 13, 15, 16] Mencari potongan materi paling relevan secara semantik menggunakan
+        cosine similarity di ChromaDB.
+        Mendukung dua tanda tangan pemanggilan:
+          1. search(index_name, query_embedding, k=5)  [Panduan PDS Module 13/16]
+          2. search(query, k=5, kelas=None, user_id=None) [MathAI Default]
         """
-        total = self.count()
+        coll = self.collection
+        query_text = ""
+        query_vec: Optional[List[float]] = None
+
+        if isinstance(query_embedding_or_k, (list, tuple)):
+            # Pemanggilan gaya Module 13/16: search(index_name, query_embedding, k=...)
+            coll = self.ensure_index(str(query_or_index))
+            query_vec = [float(x) for x in query_embedding_or_k]
+        elif isinstance(query_or_index, (list, tuple)):
+            query_vec = [float(x) for x in query_or_index]
+            if isinstance(query_embedding_or_k, int):
+                k = query_embedding_or_k
+        else:
+            query_text = str(query_or_index)
+            if isinstance(query_embedding_or_k, int):
+                k = query_embedding_or_k
+            query_vec = embed_text(query_text, base_url=self.ollama_base_url, model=self.embed_model)
+
+        total = coll.count()
         if total == 0:
             return []
 
-        query_vec = embed_text(query, base_url=self.ollama_base_url, model=self.embed_model)
         candidate_k = min(max(k * 6, 20), total)
 
         where_filter = None
@@ -176,20 +254,20 @@ class VectorStore:
                 where_filter = {"kelas": {"$in": ["12", "Umum", ""]}}
 
         try:
-            res = self.collection.query(
+            res = coll.query(
                 query_embeddings=[query_vec],
                 n_results=candidate_k,
                 where=where_filter,
                 include=["documents", "metadatas", "distances"],
             )
             if where_filter and (not res["documents"] or not res["documents"][0]):
-                res = self.collection.query(
+                res = coll.query(
                     query_embeddings=[query_vec],
                     n_results=candidate_k,
                     include=["documents", "metadatas", "distances"],
                 )
         except Exception:
-            res = self.collection.query(
+            res = coll.query(
                 query_embeddings=[query_vec],
                 n_results=candidate_k,
                 include=["documents", "metadatas", "distances"],
@@ -201,7 +279,7 @@ class VectorStore:
             "materi", "rumus", "contoh", "dengan", "adalah", "jika", "maka",
         }
         query_terms = [
-            w for w in re.findall(r"[a-zA-Z0-9]{3,}", query.lower())
+            w for w in re.findall(r"[a-zA-Z0-9]{3,}", query_text.lower())
             if w not in stopwords
         ]
 
@@ -223,14 +301,18 @@ class VectorStore:
                 doc_lower = f"{meta.get('judul', '')} {meta.get('source', '')} {doc_text}".lower()
                 matched_terms = sum(1 for term in query_terms if term in doc_lower)
                 boost = min(0.15, matched_terms * 0.04)
+                sim_score = round(base_sim + boost, 4)
 
                 hits.append(
                     {
+                        "_id": doc_id,
+                        "_score": sim_score,
+                        "_source": {"text": doc_text, "metadata": meta},
                         "id": doc_id,
                         "text": doc_text,
                         "metadata": meta,
                         "distance": float(dist),
-                        "similarity": round(base_sim + boost, 4),
+                        "similarity": sim_score,
                     }
                 )
 

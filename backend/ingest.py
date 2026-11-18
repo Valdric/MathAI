@@ -1,6 +1,7 @@
 """
 Module 10 — Knowledge Base Ingestion & Text Extraction
 MathAI (Asisten AI Matematika SMA)
+Unified with rag_chunking.py (Data Engineer & Data Scientist Pipeline)
 """
 
 import os
@@ -8,7 +9,13 @@ import re
 from typing import List, Dict, Any, Tuple
 from pypdf import PdfReader
 from docx import Document as DocxDocument
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from embeddings import embed_text, DEFAULT_OLLAMA_BASE_URL
+from rag_chunking import (
+    chunk_markdown_with_metadata,
+    clean_and_normalize_latex,
+    extract_frontmatter,
+)
 
 
 def extract_text(file_path: str) -> str:
@@ -30,111 +37,66 @@ def extract_text(file_path: str) -> str:
 def parse_markdown_frontmatter(text: str, rel_path: str = "") -> Tuple[Dict[str, str], str]:
     """
     Mengekstrak YAML frontmatter dari dokumen Markdown (judul, kelas, fase, bab, mapel, kurikulum)
-    dan mengembalikan tuple (metadata, body_text).
+    menggunakan parser kanonik rag_chunking.extract_frontmatter.
     """
+    raw_fm, body = extract_frontmatter(text)
     metadata: Dict[str, str] = {
         "source": rel_path.replace("\\", "/"),
-        "judul": "",
-        "kelas": "",
-        "fase": "",
-        "bab": "",
-        "mapel": "Matematika SMA",
+        "source_file": rel_path.replace("\\", "/"),
+        "judul": str(raw_fm.get("judul", "")),
+        "kelas": str(raw_fm.get("kelas", "")),
+        "fase": str(raw_fm.get("fase", "")),
+        "bab": str(raw_fm.get("bab", "")),
+        "mapel": str(raw_fm.get("mapel", "Matematika SMA")),
     }
 
     norm_path = rel_path.replace("\\", "/").lower()
-    if "kelas_10" in norm_path:
-        metadata["kelas"] = "10"
-    elif "kelas_11" in norm_path:
-        metadata["kelas"] = "11"
-    elif "kelas_12" in norm_path:
-        metadata["kelas"] = "12"
-    elif "tambahan" in norm_path:
-        metadata["kelas"] = "Umum"
+    if not metadata["kelas"]:
+        if "kelas_10" in norm_path:
+            metadata["kelas"] = "10"
+        elif "kelas_11" in norm_path:
+            metadata["kelas"] = "11"
+        elif "kelas_12" in norm_path:
+            metadata["kelas"] = "12"
+        elif "tambahan" in norm_path:
+            metadata["kelas"] = "Tambahan"
 
-    body = text
-    fm_match = re.match(r"^---\s*\r?\n(.*?)\r?\n---\s*\r?\n", text, flags=re.DOTALL)
-    if fm_match:
-        fm_block = fm_match.group(1)
-        body = text[fm_match.end():]
-        for line in fm_block.splitlines():
-            if ":" in line:
-                key, val = line.split(":", 1)
-                key = key.strip().lower()
-                val = val.strip().strip('"').strip("'")
-                if key in ("judul", "kelas", "fase", "bab", "mapel", "kurikulum", "sumber"):
-                    metadata[key] = val
+    for key in ("kurikulum", "sumber"):
+        if key in raw_fm:
+            metadata[key] = str(raw_fm[key])
 
-    return metadata, body.strip()
-
-
-def _protect_latex_blocks(text: str) -> Tuple[str, Dict[str, str]]:
-    """
-    Melindungi blok LaTeX ($$...$$ dan $...$) sebagai token atomik
-    agar tidak pernah terpotong di tengah formula saat proses chunking.
-    """
-    placeholders: Dict[str, str] = {}
-    counter = 0
-
-    def _replace(match: re.Match) -> str:
-        nonlocal counter
-        token = f"__LATEX_ATOM_{counter}__"
-        placeholders[token] = match.group(0)
-        counter += 1
-        return token
-
-    # Lindungi blok display math $$...$$ terlebih dahulu, lalu inline math $...$
-    protected = re.sub(r"\$\$.*?\$\$", _replace, text, flags=re.DOTALL)
-    protected = re.sub(r"(?<!\$)\$(?!\$)([^\$\n]+?)\$(?!\$)", _replace, protected)
-    return protected, placeholders
-
-
-def _restore_latex_blocks(text: str, placeholders: Dict[str, str]) -> str:
-    """Mengembalikan token atomik LaTeX menjadi formula aslinya."""
-    for token, formula in placeholders.items():
-        if token in text:
-            text = text.replace(token, formula)
-    return text
+    return metadata, clean_and_normalize_latex(body)
 
 
 def split_markdown_into_chunks(
     text: str,
     rel_path: str = "",
-    chunk_size: int = 1200,
-    chunk_overlap: int = 200,
+    chunk_size: int = 900,
+    chunk_overlap: int = 150,
 ) -> List[Dict[str, Any]]:
     """
     Memecah dokumen Markdown di knowledge_base menjadi potongan teks (chunks)
-    dengan menjaga keutuhan rumus LaTeX ($$...$$ dan $...$) beserta metadata lengkap.
+    menggunakan structure-aware chunker kanonik (rag_chunking.chunk_markdown_with_metadata)
+    yang menjamin rumus LaTeX ($$...$$ dan $...$) tidak pernah terpotong di tengah formula.
     """
-    base_meta, body = parse_markdown_frontmatter(text, rel_path=rel_path)
-    if not body:
-        return []
-
-    protected_body, placeholders = _protect_latex_blocks(body)
-
-    splitter = RecursiveCharacterTextSplitter(
+    norm_rel = rel_path.replace("\\", "/") or "document.md"
+    raw_chunks = chunk_markdown_with_metadata(
+        raw_text=text,
+        source_name=norm_rel,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
-        separators=["\n## ", "\n### ", "\n#### ", "\n\n", "\n", " "],
+        breadcrumb_in_text=True,
     )
-    raw_chunks = splitter.split_text(protected_body)
-
-    header_prefix = ""
-    if base_meta.get("judul"):
-        kelas_str = f"Kelas {base_meta['kelas']}" if base_meta.get("kelas") else "SMA"
-        header_prefix = f"[{kelas_str} - {base_meta['judul']} ({base_meta.get('mapel', 'Matematika')})]\n"
-
     results: List[Dict[str, Any]] = []
-    for idx, raw_chunk in enumerate(raw_chunks):
-        restored_chunk = _restore_latex_blocks(raw_chunk, placeholders).strip()
-        if not restored_chunk:
-            continue
-        meta = dict(base_meta)
+    for idx, ch in enumerate(raw_chunks):
+        meta = dict(ch["metadata"])
+        meta["source"] = norm_rel
+        meta["source_file"] = norm_rel
         meta["chunk_index"] = idx
         results.append(
             {
-                "id": f"{base_meta['source']}::chunk_{idx}",
-                "text": f"{header_prefix}{restored_chunk}" if header_prefix else restored_chunk,
+                "id": f"{norm_rel}::chunk_{idx}",
+                "text": ch["text"],
                 "metadata": meta,
             }
         )
@@ -152,7 +114,7 @@ def discover_knowledge_base_files(kb_root: str) -> List[str]:
     discovered: List[str] = []
     for root, _, files in os.walk(kb_root):
         for fname in sorted(files):
-            if fname.lower() == "readme.md":
+            if fname.lower() in ("readme.md", "sma_m4thlab_curriculum.md"):
                 continue
             if fname.lower().endswith((".md", ".txt", ".pdf", ".docx")):
                 discovered.append(os.path.join(root, fname))
@@ -162,24 +124,47 @@ def discover_knowledge_base_files(kb_root: str) -> List[str]:
 def ingest_documents(
     knowledge_base_path: str,
     vector_store: Any,
-    chunk_size: int = 1200,
-    chunk_overlap: int = 200,
+    index_name: str = "mathai_knowledge_base",
+    ollama_base_url: str = DEFAULT_OLLAMA_BASE_URL,
 ) -> int:
     """
-    [Module 14] Membaca seluruh dokumen di knowledge_base_path, memecahnya menjadi chunks,
-    dan menyimpannya ke VectorStore (ChromaDB) secara idempotent (upsert berdasarkan doc_id).
+    [Module 14] Membaca seluruh dokumen di knowledge_base_path, meng-embed dengan nomic-embed-text,
+    dan menyimpannya ke VectorStore (ChromaDB) menggunakan doc_id=filename agar idempotent
+    (overwrite di tempat tanpa menduplikasi dokumen saat dijalankan berulang kali).
     """
-    vector_store.ensure_collection()
-    files = discover_knowledge_base_files(knowledge_base_path)
-    all_chunks: List[Dict[str, Any]] = []
+    kb_path = knowledge_base_path
+    if not os.path.exists(kb_path):
+        fallback_kb = os.path.join(os.path.dirname(os.path.abspath(__file__)), "knowledge_base")
+        if os.path.exists(fallback_kb):
+            kb_path = fallback_kb
+
+    vector_store.ensure_index(index_name)
+
+    # Cek apakah folder berisi file langsung di level atas atau subfolder kurikulum
+    direct_files = [
+        os.path.join(kb_path, f)
+        for f in sorted(os.listdir(kb_path))
+        if os.path.isfile(os.path.join(kb_path, f))
+        and f.lower().endswith((".md", ".txt", ".pdf", ".docx"))
+        and f.lower() != "readme.md"
+    ] if os.path.isdir(kb_path) else []
+
+    files = discover_knowledge_base_files(kb_path)
+    if not files and direct_files:
+        files = direct_files
+
+    count = 0
     for file_path in files:
-        rel_path = os.path.relpath(file_path, knowledge_base_path).replace("\\", "/")
+        rel_path = os.path.relpath(file_path, kb_path).replace("\\", "/")
+        doc_id = os.path.basename(file_path) if "/" not in rel_path else rel_path
         text = extract_text(file_path)
-        chunks = split_markdown_into_chunks(
-            text,
-            rel_path=rel_path,
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
+        embedding = embed_text(text, base_url=ollama_base_url)
+        vector_store.index_document(
+            index_name,
+            doc_id=doc_id,
+            text=text,
+            embedding=embedding,
+            metadata={"source": doc_id},
         )
-        all_chunks.extend(chunks)
-    return vector_store.index_chunks(all_chunks)
+        count += 1
+    return count

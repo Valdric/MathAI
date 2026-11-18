@@ -69,6 +69,19 @@ export const ChatBubble: React.FC<IChatBubbleProps> = ({
     minute: '2-digit',
   });
 
+  // Parse [attachment: <filename>] prefix jika pesan memiliki lampiran dokumen
+  let attachmentName: string | null = null;
+  let userText = message.text;
+  if (isUser) {
+    const match = message.text.match(/^\[attachment:\s*([^\]]+)\]\n?([\s\S]*)$/);
+    if (match) {
+      attachmentName = match[1].trim();
+      userText = match[2];
+    }
+  }
+
+  const fileExt = attachmentName ? attachmentName.split('.').pop()?.toLowerCase() : null;
+
   if (isUser) {
     return (
       <div className="flex flex-col items-end w-full my-2.5">
@@ -83,7 +96,30 @@ export const ChatBubble: React.FC<IChatBubbleProps> = ({
         </div>
 
         <div className="max-w-[85%] md:max-w-2xl p-4 rounded-2xl rounded-tr-xs bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100/90 dark:border-indigo-900/50 text-slate-800 dark:text-slate-100 shadow-2xs text-sm md:text-base leading-relaxed wrap-break-word">
-          <p className="whitespace-pre-wrap">{message.text}</p>
+          {attachmentName && (
+            <div className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 mb-2.5 shadow-xs">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs uppercase ${
+                  fileExt === 'pdf'
+                    ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200/60 dark:border-red-900/40'
+                    : fileExt === 'docx'
+                    ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/40'
+                    : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/40'
+                }`}
+              >
+                {fileExt?.toUpperCase() || 'FILE'}
+              </div>
+              <div className="flex flex-col min-w-0 flex-1 text-left">
+                <span className="text-xs md:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate" title={attachmentName}>
+                  {attachmentName}
+                </span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                  Dokumen Terlampir
+                </span>
+              </div>
+            </div>
+          )}
+          <p className="whitespace-pre-wrap">{userText}</p>
         </div>
 
         <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400 dark:text-slate-500 select-none">
@@ -128,24 +164,24 @@ export const ChatBubble: React.FC<IChatBubbleProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => onSelectPrompt('Bahas contoh soal serupa dengan angka yang berbeda')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs font-medium transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs font-medium transition-all cursor-pointer"
               >
                 <Search size={12} className="text-emerald-600" />
                 <span>Bahas Soal Serupa</span>
               </button>
               <button
-                onClick={() => onSelectPrompt('Berikan 1 latihan soal interaktif terkait langkah di atas')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs font-medium transition-all"
+                onClick={() => onSelectPrompt('Tuliskan rumus alternatif dan cara cepatnya')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs font-medium transition-all cursor-pointer"
               >
-                <BookOpen size={12} className="text-indigo-600" />
-                <span>Coba Latihan Interaktif</span>
+                <BookOpen size={12} className="text-emerald-600" />
+                <span>Rumus Cepat Alternatif</span>
               </button>
               <button
-                onClick={() => onSelectPrompt('Jelaskan trik cepat dan rumus pintas untuk soal ini')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs font-medium transition-all"
+                onClick={() => onSelectPrompt('Berikan latihan soal mandiri tingkat UTBK')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs font-medium transition-all cursor-pointer"
               >
-                <HelpCircle size={12} className="text-amber-600" />
-                <span>Trik Cepat Ujian</span>
+                <CheckCheck size={12} className="text-emerald-600" />
+                <span>Latihan Soal UTBK</span>
               </button>
             </div>
           </div>
