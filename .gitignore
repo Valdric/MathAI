@@ -9,6 +9,10 @@ __pycache__/
 *.pyc
 backend/instance/
 frontend/dist/
+backend/*.db
+backend/*.db-journal
+*.db
+*.db-journal
 
 # RAG: artefak lokal yang dibangun otomatis dari backend/knowledge_base saat server start
 backend/chroma_db/
