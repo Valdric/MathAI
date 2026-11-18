@@ -5,7 +5,6 @@ import {
   X,
   MessageSquare,
   Home,
-  Sparkles,
   ChevronDown,
   GraduationCap,
   BookOpen,
@@ -110,7 +109,6 @@ export const Sidebar: React.FC = () => {
           className="w-full justify-center py-2.5 px-4 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 shadow-sm gap-2"
         >
           <Plus size={16} />
-          <Sparkles size={14} className="text-emerald-200" />
           <span>Chat Baru</span>
         </Button>
         <button

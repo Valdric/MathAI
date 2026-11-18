@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { CheckCheck, CheckCircle2, Sparkles, BookOpen, Search, HelpCircle } from 'lucide-react';
+import { CheckCheck, CheckCircle2, BookOpen, Search, HelpCircle } from 'lucide-react';
 import type { IMessage } from '../../../types/chat';
 import { Skeleton } from '../../../components/atoms/Skeleton';
 import { Spinner } from '../../../components/atoms/Spinner';
@@ -122,7 +122,7 @@ export const ChatBubble: React.FC<IChatBubbleProps> = ({
         {isLastAiMessage && onSelectPrompt && (
           <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80 flex flex-col gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
-              <Sparkles size={11} className="text-emerald-500" />
+              <HelpCircle size={11} className="text-emerald-500" />
               LANGKAH PEMBAHASAN SELANJUTNYA
             </span>
             <div className="flex flex-wrap items-center gap-2">

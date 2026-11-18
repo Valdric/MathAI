@@ -10,7 +10,6 @@ import {
   Maximize2,
   Minimize2,
   Calculator as CalcIcon,
-  Sparkles,
   Camera,
   Sigma,
 } from 'lucide-react';
@@ -280,7 +279,7 @@ export const ChatArea: React.FC = () => {
               {activeChat.messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-6 text-center my-4 bg-white/50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl select-none">
                   <div className="w-10 h-10 rounded-xl bg-emerald-100/50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-2">
-                    <Sparkles size={20} />
+                    <MessageSquare size={18} />
                   </div>
                   <h3 className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-200 mb-1">
                     Materi di atas sudah siap! Sekarang giliranmu bertanya.

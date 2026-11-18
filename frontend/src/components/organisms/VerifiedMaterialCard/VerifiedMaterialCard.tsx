@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Sparkles,
   BookOpen,
   AlertTriangle,
   Lightbulb,
@@ -151,7 +150,7 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
-            <Sparkles size={13} />
+            <span>✍️</span>
             <span>Contoh Soal</span>
           </button>
         </div>
@@ -182,7 +181,7 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
                 {/* Kolom Kiri: Poin Kunci & Karakteristik */}
                 <div className="flex flex-col gap-2 p-3.5 rounded-lg bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-emerald-500" />
+                    <CheckCircle2 size={13} className="text-emerald-500" />
                     Poin Kunci & Karakteristik
                   </span>
                   <ul className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300">
@@ -258,8 +257,7 @@ export const VerifiedMaterialCard: React.FC<IVerifiedMaterialCardProps> = ({ dat
             <div className="rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/20 dark:bg-emerald-950/10 p-4 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 text-white font-bold text-[11px] tracking-wide uppercase shadow-2xs">
-                    <Sparkles size={11} />
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-600 text-white font-bold text-[11px] tracking-wide uppercase shadow-2xs">
                     CONTOH SOAL PEMBAHASAN
                   </span>
                   <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 hidden sm:inline">
